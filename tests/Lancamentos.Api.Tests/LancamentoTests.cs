@@ -2,7 +2,8 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Cashflow.Lancamentos.Api.Application;
+using Cashflow.Lancamentos.Application;
+using Cashflow.Lancamentos.Domain;
 using Dapper;
 using Npgsql;
 
@@ -125,7 +126,7 @@ public sealed class LancamentoTests(PostgresFixture db)
     {
         var comerciante = Guid.NewGuid();
         var chave = Guid.NewGuid().ToString();
-        var hash = LancamentoService.HashCorpo(TipoLancamento.Debito, 100.00m, null);
+        var hash = LancamentoCorpo.Hash(TipoLancamento.Debito, 100.00m, null);
 
         await using (var conn = new NpgsqlConnection(db.ConnectionString))
         {
