@@ -2,5 +2,11 @@ namespace Cashflow.CrossCuttingConcerns.DateTimes;
 
 public interface IDateTimeProvider
 {
-    DateTimeOffset UtcNow { get; }
+    DateTime Now { get; }
+
+    DateTime UtcNow { get; }
+
+    DateTimeOffset OffsetNow { get; }
+
+    DateTimeOffset OffsetUtcNow { get; }
 }

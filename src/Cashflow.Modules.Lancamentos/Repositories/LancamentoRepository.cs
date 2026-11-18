@@ -1,150 +1,72 @@
-using System.Text.Json;
-using Cashflow.Contracts;
-using Cashflow.Modules.Lancamentos.Commands;
+using Cashflow.Domain.Repositories;
 using Cashflow.Modules.Lancamentos.Entities;
-using Cashflow.Modules.Lancamentos.Repositories;
 using Dapper;
-using Npgsql;
 
 namespace Cashflow.Modules.Lancamentos.Repositories;
 
-public sealed class LancamentoRepository(NpgsqlDataSource dataSource) : IRegistroDeLancamentos
+public sealed class LancamentoRepository(LancamentosDbContext dbContext) : ILancamentoRepository
 {
-    private sealed record OriginalRow(
-        string Tipo, decimal Valor, string? Descricao, DateOnly Data, DateTime CriadoEm, Guid? EstornoDe);
+    private const string Colunas = """
+        id AS Id, comerciante_id AS ComercianteId, tipo AS Tipo, valor AS Valor, descricao AS Descricao,
+        data AS Data, criado_em AS CriadoEm, estorno_de AS EstornoDe
+        """;
 
-    public async Task RegistrarAsync(
-        Lancamento lancamento, string respostaJson, string chaveIdempotencia, CancellationToken ct)
+    private sealed record LancamentoRow(
+        Guid Id, Guid ComercianteId, string Tipo, decimal Valor, string? Descricao,
+        DateOnly Data, DateTime CriadoEm, Guid? EstornoDe);
+
+    public IUnitOfWork UnitOfWork => dbContext;
+
+    public async Task AddAsync(Lancamento entity, CancellationToken cancellationToken = default)
     {
-        var eventId = Guid.NewGuid();
-        var evento = CashflowEventSerializer.Serialize(new CashflowEvent<LancamentoEventPayload>(
-            eventId, EventTypes.LancamentoRegistrado, lancamento.CriadoEm, 1,
-            new LancamentoEventPayload(
-                lancamento.Id, lancamento.ComercianteId, lancamento.Tipo.Texto(),
-                lancamento.Valor, lancamento.Data, null)));
-
-        await using var conn = await dataSource.OpenConnectionAsync(ct);
-        await using var tx = await conn.BeginTransactionAsync(ct);
-
-        await InserirLancamentoAsync(conn, tx, lancamento, ct);
-        await InserirEventoAsync(conn, tx, eventId, evento, lancamento.CriadoEm, ct);
-        await ConcluirIdempotenciaAsync(conn, tx, lancamento, respostaJson, chaveIdempotencia, ct);
-
-        await tx.CommitAsync(ct);
-    }
-
-    public async Task<(EstornoResultado resultado, Lancamento? estorno)> EstornarAsync(
-        Guid comercianteId, Guid lancamentoId, DateOnly data, DateTimeOffset agora,
-        string chaveIdempotencia, CancellationToken ct)
-    {
-        await using var conn = await dataSource.OpenConnectionAsync(ct);
-        await using var tx = await conn.BeginTransactionAsync(ct);
-
-        var original = await conn.QuerySingleOrDefaultAsync<OriginalRow>("""
-            SELECT tipo AS Tipo, valor AS Valor, descricao AS Descricao, data AS Data,
-                   criado_em AS CriadoEm, estorno_de AS EstornoDe
-            FROM lancamento
-            WHERE id = @id AND comerciante_id = @comerciante
-            FOR UPDATE
-            """, new { id = lancamentoId, comerciante = comercianteId }, tx);
-
-        if (original is null)
-        {
-            await tx.RollbackAsync(ct);
-            return (EstornoResultado.NaoEncontrado, null);
-        }
-
-        if (original.EstornoDe is not null)
-        {
-            await tx.RollbackAsync(ct);
-            return (EstornoResultado.RegraInvalida, null);
-        }
-
-        var jaEstornado = await conn.ExecuteScalarAsync<int>(
-            "SELECT count(*) FROM lancamento WHERE estorno_de = @id",
-            new { id = lancamentoId }, tx);
-
-        if (jaEstornado > 0)
-        {
-            await tx.RollbackAsync(ct);
-            return (EstornoResultado.Conflito, null);
-        }
-
-        if (!TipoLancamentoExtensions.TryParseTexto(original.Tipo, out var tipo))
-        {
-            await tx.RollbackAsync(ct);
-            return (EstornoResultado.RegraInvalida, null);
-        }
-
-        var originalLancamento = new Lancamento(
-            lancamentoId, comercianteId, tipo, original.Valor, original.Descricao,
-            original.Data, new DateTimeOffset(original.CriadoEm), original.EstornoDe);
-
-        var estorno = Lancamento.Estornar(originalLancamento, data, agora);
-
-        var resposta = new LancamentoResponse(
-            estorno.Id, estorno.ComercianteId, estorno.Data, estorno.Valor,
-            estorno.Tipo.Texto(), null, estorno.EstornoDe);
-        var respostaJson = JsonSerializer.Serialize(resposta, CashflowJson.Options);
-
-        var eventId = Guid.NewGuid();
-        var evento = CashflowEventSerializer.Serialize(new CashflowEvent<LancamentoEventPayload>(
-            eventId, EventTypes.LancamentoEstornado, agora, 1,
-            new LancamentoEventPayload(
-                estorno.Id, estorno.ComercianteId, estorno.Tipo.Texto(),
-                estorno.Valor, estorno.Data, estorno.EstornoDe)));
-
-        await InserirLancamentoAsync(conn, tx, estorno, ct);
-        await InserirEventoAsync(conn, tx, eventId, evento, agora, ct);
-        await ConcluirIdempotenciaAsync(conn, tx, estorno, respostaJson, chaveIdempotencia, ct);
-
-        await tx.CommitAsync(ct);
-        return (EstornoResultado.Criado, estorno);
-    }
-
-    private static Task InserirLancamentoAsync(
-        NpgsqlConnection conn, NpgsqlTransaction tx, Lancamento lancamento, CancellationToken ct) =>
-        conn.ExecuteAsync("""
+        var conn = await dbContext.GetConnectionAsync(cancellationToken);
+        await conn.ExecuteAsync(new CommandDefinition("""
             INSERT INTO lancamento (id, comerciante_id, tipo, valor, descricao, data, criado_em, estorno_de)
-            VALUES (@id, @comerciante, @tipo, @valor, @descricao, @data, @criadoEm, @estornoDe)
+            VALUES (@Id, @ComercianteId, @Tipo, @Valor, @Descricao, @Data, @CriadoEm, @EstornoDe)
             """, new
         {
-            id = lancamento.Id,
-            comerciante = lancamento.ComercianteId,
-            tipo = lancamento.Tipo.Texto(),
-            valor = lancamento.Valor,
-            descricao = lancamento.Descricao,
-            data = lancamento.Data,
-            criadoEm = lancamento.CriadoEm,
-            estornoDe = lancamento.EstornoDe
-        }, tx);
+            entity.Id,
+            entity.ComercianteId,
+            Tipo = entity.Tipo.Texto(),
+            entity.Valor,
+            entity.Descricao,
+            entity.Data,
+            CriadoEm = entity.CreatedDateTime,
+            entity.EstornoDe
+        }, dbContext.CurrentTransaction, cancellationToken: cancellationToken));
+    }
 
-    private static Task InserirEventoAsync(
-        NpgsqlConnection conn, NpgsqlTransaction tx, Guid eventId, string payload,
-        DateTimeOffset criadoEm, CancellationToken ct) =>
-        conn.ExecuteAsync("""
-            INSERT INTO outbox_event (id, event_id, payload, criado_em)
-            VALUES (@id, @eventId, CAST(@payload AS jsonb), @criadoEm)
-            """, new
-        {
-            id = Guid.NewGuid(),
-            eventId,
-            payload,
-            criadoEm
-        }, tx);
+    public Task<Lancamento?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        QuerySingleAsync($"SELECT {Colunas} FROM lancamento WHERE id = @id", new { id }, cancellationToken);
 
-    private static Task ConcluirIdempotenciaAsync(
-        NpgsqlConnection conn, NpgsqlTransaction tx, Lancamento lancamento, string respostaJson,
-        string chaveIdempotencia, CancellationToken ct) =>
-        conn.ExecuteAsync("""
-            UPDATE idempotencia
-            SET status = 'concluido', lancamento_id = @id, resposta = CAST(@resposta AS jsonb)
-            WHERE comerciante_id = @comerciante AND chave = @chave
-            """, new
-        {
-            id = lancamento.Id,
-            comerciante = lancamento.ComercianteId,
-            chave = chaveIdempotencia,
-            resposta = respostaJson
-        }, tx);
+    public Task<Lancamento?> GetForUpdateAsync(Guid comercianteId, Guid id, CancellationToken cancellationToken = default) =>
+        QuerySingleAsync($"""
+            SELECT {Colunas} FROM lancamento
+            WHERE id = @id AND comerciante_id = @comercianteId
+            FOR UPDATE
+            """, new { id, comercianteId }, cancellationToken);
+
+    public async Task<bool> ExisteEstornoDeAsync(Guid lancamentoId, CancellationToken cancellationToken = default)
+    {
+        var conn = await dbContext.GetConnectionAsync(cancellationToken);
+        return await conn.ExecuteScalarAsync<bool>(new CommandDefinition(
+            "SELECT EXISTS (SELECT 1 FROM lancamento WHERE estorno_de = @lancamentoId)",
+            new { lancamentoId }, dbContext.CurrentTransaction, cancellationToken: cancellationToken));
+    }
+
+    private async Task<Lancamento?> QuerySingleAsync(string sql, object param, CancellationToken cancellationToken)
+    {
+        var conn = await dbContext.GetConnectionAsync(cancellationToken);
+        var row = await conn.QuerySingleOrDefaultAsync<LancamentoRow>(new CommandDefinition(
+            sql, param, dbContext.CurrentTransaction, cancellationToken: cancellationToken));
+
+        if (row is null)
+            return null;
+
+        if (!TipoLancamentoExtensions.TryParseTexto(row.Tipo, out var tipo))
+            throw new InvalidOperationException($"tipo de lançamento inválido no banco: {row.Tipo}");
+
+        return Lancamento.Restaurar(row.Id, row.ComercianteId, tipo, row.Valor, row.Descricao,
+            row.Data, new DateTimeOffset(DateTime.SpecifyKind(row.CriadoEm, DateTimeKind.Utc)), row.EstornoDe);
+    }
 }

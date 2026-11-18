@@ -28,8 +28,8 @@
     <ProjectReference Include="..\..\src\Cashflow.Infrastructure\Cashflow.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\Cashflow.Modules.Lancamentos\Cashflow.Modules.Lancamentos.csproj" />
     <ProjectReference Include="..\..\src\Cashflow.Modules.Consolidado\Cashflow.Modules.Consolidado.csproj" />
-    <ProjectReference Include="..\..\src\Lancamentos.Api\Lancamentos.Api.csproj" />
-    <ProjectReference Include="..\..\src\Consolidado.Api\Consolidado.Api.csproj" />
+    <ProjectReference Include="..\..\src\Cashflow.WebAPI\Cashflow.WebAPI.csproj" />
+    <ProjectReference Include="..\..\src\Cashflow.BackgroundServer\Cashflow.BackgroundServer.csproj" />
   </ItemGroup>
 
 </Project>

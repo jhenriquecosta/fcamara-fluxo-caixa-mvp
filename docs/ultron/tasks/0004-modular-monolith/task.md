@@ -4,7 +4,7 @@ tipo: refactor
 branch: refactor/0004-modular-monolith
 estado: em andamento
 responsavel: jhenriquecosta@hotmail.com
-next_skill: ultron-coder
+next_skill: ultron-verify
 issue: #15
 
 ## Contexto
@@ -30,9 +30,23 @@ O Operador reprovou a estrutura anterior: há separação por camadas, não sepa
 - Controllers → minimal endpoints: o módulo expõe Endpoints/ com a mesma superfície HTTP.
 - O Migrator é runner com scripts SQL, como o DbUp da referência.
 
+## Reavaliação (2026-11-18)
+
+A primeira passada copiou os nomes de pasta da referência sem o mecanismo: `ICommand` existia e nenhum módulo o usava; os endpoints injetavam o handler concreto; o consumer falava com o Confluent.Kafka direto; os workers foram para um `BackgroundServer` que nada subia (as 5 falhas do e2e). O Operador reprovou e pediu a referência como template, de verdade.
+
+**Decisão de hosts (opção 1, aprovada):** um `Cashflow.WebAPI` igual à referência, implantado duas vezes com `Modules:<X>:Enabled` — `lancamentos-api` e `consolidado-api` — mais `Cashflow.BackgroundServer` (outbox + consumer, também com os interruptores) e `Cashflow.Migrator`. A falha isolada do requisito vive no deploy, não em projetos duplicados.
+
+**Fatias:**
+1. Domain/Application iguais à referência (ICommand/IQuery + handlers no mesmo arquivo, Dispatcher com eventos de domínio, HandlerFactory, Decorators, MessageBus, IMessageSender/IMessageReceiver/IMessageBusConsumer, IOutBoxEventPublisher).
+2. Infrastructure: MessageBrokers (KafkaSender/KafkaReceiver com retry+DLT, MessageBrokerOptions), MessageBusConsumerBackgroundService, Persistence (DbContext Dapper como unidade de trabalho).
+3. Módulo Lançamentos: Commands (Registrar, Estornar, PublishEvents), EventHandlers (o outbox nasce do EntityCreatedEvent), OutBoxEventPublishers, Entities, Models, Repositories, Endpoints via Dispatcher.
+4. Módulo Consolidado: Queries, Commands (Projetar), MessageBusConsumers, Models, Repositories, Endpoints via Dispatcher.
+5. Hosts (WebAPI, BackgroundServer, Migrator), Dockerfiles, compose, Prometheus, README, ADR que substitui o ADR-0007.
+6. Testes por módulo (Unit/Integration), EndToEnd, ArchTests que proíbem handler sem interface e endpoint que resolve handler concreto.
+
 ## Critérios de aceitação
 
-- [ ] A suíte (24+) verde.
-- [ ] O `docker compose up` sobe e o demo do README passa.
-- [ ] As dependências: os módulos podem referenciar os compartilhados; os compartilhados não referenciam módulo; o Domain no máximo o CrossCuttingConcerns; o Contracts sem dependência.
-- [ ] Nenhum comportamento observável muda.
+- [x] A suíte verde: 57/57 (17 unidade, 17 integração, 5 ponta a ponta, 18 arquitetura).
+- [x] O `docker compose up` sobe (migrator, lancamentos-api, consolidado-api, background-server) e o demo do README passa; falha isolada conferida parando o consolidado.
+- [x] As dependências: os módulos podem referenciar os compartilhados; os compartilhados não referenciam módulo; o Domain no máximo o CrossCuttingConcerns; o Contracts sem dependência.
+- [x] Nenhum comportamento observável muda — exceto a correção de `"tipo":"1"` (antes aceito como crédito, agora 422), registrada no ADR-0009.

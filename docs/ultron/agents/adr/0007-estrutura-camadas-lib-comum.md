@@ -1,6 +1,6 @@
 # ADR-0007 — Separação em camadas e lib comum
 
-**Status:** accepted
+**Status:** superseded por [ADR-0009](0009-monolito-modular.md)
 **Data:** 2026-11-18
 **Decisores:** J Henrique Costa (Operador) · ULTRON
 **Versão do documento:** 1.1

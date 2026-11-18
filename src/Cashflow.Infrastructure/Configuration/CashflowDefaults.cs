@@ -1,3 +1,4 @@
+using Cashflow.Contracts;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Memory;
 
@@ -14,7 +15,11 @@ public static class CashflowDefaults
             ["TimeZone:Business"] = "America/Sao_Paulo",
             ["Serilog:MinimumLevel:Default"] = "Information",
             ["Serilog:MinimumLevel:Override:Microsoft"] = "Warning",
-            ["Serilog:MinimumLevel:Override:Microsoft.AspNetCore"] = "Warning"
+            ["Serilog:MinimumLevel:Override:Microsoft.AspNetCore"] = "Warning",
+            ["MessageBroker:Provider"] = "Kafka",
+            ["MessageBroker:Kafka:GroupId"] = Topics.GrupoConsolidado,
+            [$"MessageBroker:Kafka:Topics:{nameof(LancamentoEventPayload)}"] = Topics.Lancamentos,
+            [$"MessageBroker:Kafka:DeadLetterTopics:{nameof(LancamentoEventPayload)}"] = Topics.LancamentosDlt
         };
 
     /// <summary>

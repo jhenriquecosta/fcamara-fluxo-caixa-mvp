@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Cashflow.Application\Cashflow.Application.csproj" />
     <ProjectReference Include="..\Cashflow.Infrastructure\Cashflow.Infrastructure.csproj" />
     <ProjectReference Include="..\Cashflow.Modules.Lancamentos\Cashflow.Modules.Lancamentos.csproj" />
     <ProjectReference Include="..\Cashflow.Modules.Consolidado\Cashflow.Modules.Consolidado.csproj" />

@@ -1,82 +1,45 @@
-using Cashflow.Infrastructure.Messaging;
-using Cashflow.Contracts;
-using Cashflow.Modules.Lancamentos.Observability;
-using Dapper;
+using Cashflow.Application;
+using Cashflow.Modules.Lancamentos.Commands;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Npgsql;
 
 namespace Cashflow.Modules.Lancamentos.HostedServices;
 
-public sealed class PublishEventWorker(
-    NpgsqlDataSource dataSource,
-    KafkaOptions kafka,
-    LancamentosMetrics metrics,
-    ILogger<PublishEventWorker> logger) : BackgroundService
+/// <summary>Despacha o <see cref="PublishEventsCommand"/> em laço; o trabalho é do handler, como na referência.</summary>
+public sealed class PublishEventWorker(IServiceProvider services, ILogger<PublishEventWorker> logger) : BackgroundService
 {
-    private sealed record OutboxRow(Guid Id, string Payload);
+    private static readonly TimeSpan EsperaSemEventos = TimeSpan.FromMilliseconds(500);
+    private static readonly TimeSpan EsperaAposFalha = TimeSpan.FromSeconds(1);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!kafka.Habilitado)
-        {
-            logger.LogWarning("Kafka não configurado — publicador do outbox desligado");
-            return;
-        }
-
-        using var producer = CashflowKafka.CriarProdutor(kafka);
+        logger.LogInformation("publicador do outbox iniciado");
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await using var conn = await dataSource.OpenConnectionAsync(stoppingToken);
-                await using var tx = await conn.BeginTransactionAsync(stoppingToken);
-
-                var pendentes = (await conn.QueryAsync<OutboxRow>(
-                    "SELECT id AS Id, payload::text AS Payload FROM outbox_event " +
-                    "WHERE publicado_em IS NULL ORDER BY criado_em LIMIT 100 FOR UPDATE SKIP LOCKED",
-                    transaction: tx)).ToList();
-
-                foreach (var row in pendentes)
+                var command = new PublishEventsCommand();
+                await using (var scope = services.CreateAsyncScope())
                 {
-                    var chave = ExtrairChave(row.Payload);
-                    await producer.ProduceAsync(kafka.Topic,
-                        new Confluent.Kafka.Message<string, string> { Key = chave, Value = row.Payload },
-                        stoppingToken);
-                    await conn.ExecuteAsync(
-                        "UPDATE outbox_event SET publicado_em = now() WHERE id = @id",
-                        new { id = row.Id }, tx);
+                    var dispatcher = scope.ServiceProvider.GetRequiredService<Dispatcher>();
+                    await dispatcher.DispatchAsync(command, stoppingToken);
                 }
 
-                await tx.CommitAsync(stoppingToken);
-
-                var idade = await conn.ExecuteScalarAsync<double>("""
-                    SELECT COALESCE(EXTRACT(EPOCH FROM (now() - MIN(criado_em))), 0)::float8
-                    FROM outbox_event WHERE publicado_em IS NULL
-                    """);
-                metrics.OutboxAge(idade);
-
-                if (pendentes.Count == 0)
-                    await Task.Delay(TimeSpan.FromMilliseconds(500), stoppingToken);
+                if (command.SentEventsCount == 0)
+                    await Task.Delay(EsperaSemEventos, stoppingToken);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
                 break;
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "falha no publicador do outbox; tentando de novo em 1 s");
-                try { await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken); }
+                logger.LogError(ex, "falha no publicador do outbox; tentando de novo em {Espera}", EsperaAposFalha);
+                try { await Task.Delay(EsperaAposFalha, stoppingToken); }
                 catch (OperationCanceledException) { break; }
             }
         }
-    }
-
-    private static string ExtrairChave(string payload)
-    {
-        var evento = CashflowEventSerializer.Deserialize<LancamentoEventPayload>(payload)
-            ?? throw new InvalidOperationException("evento do outbox inválido");
-        return evento.Payload.ComercianteId.ToString();
     }
 }

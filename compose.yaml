@@ -42,51 +42,82 @@ services:
       retries: 20
       start_period: 20s
 
-  lancamentos:
+  # Aplica o esquema de cada módulo no banco dele e sai; os hosts só sobem depois.
+  migrator:
     build:
       context: .
-      dockerfile: src/Lancamentos.Api/Dockerfile
+      dockerfile: src/Cashflow.Migrator/Dockerfile
     environment:
+      Modules__Lancamentos__ConnectionStrings__Default: Host=postgres;Port=5432;Database=cashflow;Username=lancamentos;Password=lancamentos
+      Modules__Consolidado__ConnectionStrings__Default: Host=postgres;Port=5432;Database=cashflow_consolidado;Username=consolidado;Password=consolidado
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  # O mesmo Cashflow.WebAPI duas vezes, cada uma com um módulo ligado: uma queda do
+  # consolidado não derruba os lançamentos (ADR-0001, ADR-0009).
+  lancamentos-api:
+    image: cashflow/webapi:local
+    build:
+      context: .
+      dockerfile: src/Cashflow.WebAPI/Dockerfile
+    environment: &webapi
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=cashflow;Username=lancamentos;Password=lancamentos
+      ServiceName: lancamentos
+      Modules__Lancamentos__Enabled: "true"
+      Modules__Lancamentos__ConnectionStrings__Default: Host=postgres;Port=5432;Database=cashflow;Username=lancamentos;Password=lancamentos
+      Modules__Consolidado__Enabled: "false"
       Auth__Issuer: cashflow-local
       Auth__Audience: cashflow-api
       Auth__SigningKey: dev-only-signing-key-change-me-32-chars-min
-      Kafka__BootstrapServers: kafka:9092
-      Kafka__Topic: cashflow.lancamentos.v1
       Serilog__ElasticsearchUrl: http://elasticsearch:9200
     ports:
       - "8080:8080"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
+    depends_on: &webapi-deps
+      migrator:
+        condition: service_completed_successfully
       elasticsearch:
         condition: service_started
 
-  consolidado:
-    build:
-      context: .
-      dockerfile: src/Consolidado.Api/Dockerfile
+  consolidado-api:
+    image: cashflow/webapi:local
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
-      ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=cashflow_consolidado;Username=consolidado;Password=consolidado
-      Auth__Issuer: cashflow-local
-      Auth__Audience: cashflow-api
-      Auth__SigningKey: dev-only-signing-key-change-me-32-chars-min
-      Kafka__BootstrapServers: kafka:9092
-      Kafka__Topic: cashflow.lancamentos.v1
-      Kafka__DltTopic: cashflow.lancamentos.v1.dlt
-      Kafka__GroupId: consolidado
-      Serilog__ElasticsearchUrl: http://elasticsearch:9200
+      <<: *webapi
+      ServiceName: consolidado
+      Modules__Lancamentos__Enabled: "false"
+      Modules__Consolidado__Enabled: "true"
+      Modules__Consolidado__ConnectionStrings__Default: Host=postgres;Port=5432;Database=cashflow_consolidado;Username=consolidado;Password=consolidado
     ports:
       - "8081:8080"
     depends_on:
-      postgres:
-        condition: service_healthy
+      lancamentos-api:
+        condition: service_started
+      <<: *webapi-deps
+
+  # O publicador do outbox (Lançamentos) e o consumidor do barramento (Consolidado).
+  background-server:
+    build:
+      context: .
+      dockerfile: src/Cashflow.BackgroundServer/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ServiceName: background-server
+      Modules__Lancamentos__ConnectionStrings__Default: Host=postgres;Port=5432;Database=cashflow;Username=lancamentos;Password=lancamentos
+      Modules__Consolidado__ConnectionStrings__Default: Host=postgres;Port=5432;Database=cashflow_consolidado;Username=consolidado;Password=consolidado
+      MessageBroker__Provider: Kafka
+      MessageBroker__Kafka__BootstrapServers: kafka:9092
+      Auth__Issuer: cashflow-local
+      Auth__Audience: cashflow-api
+      Auth__SigningKey: dev-only-signing-key-change-me-32-chars-min
+      Serilog__ElasticsearchUrl: http://elasticsearch:9200
+    ports:
+      - "8082:8080"
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
       kafka:
         condition: service_healthy
       elasticsearch:
@@ -133,8 +164,9 @@ services:
     ports:
       - "9090:9090"
     depends_on:
-      - lancamentos
-      - consolidado
+      - lancamentos-api
+      - consolidado-api
+      - background-server
 
   grafana:
     image: grafana/grafana:11.5.0

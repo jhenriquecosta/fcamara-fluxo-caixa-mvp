@@ -1,73 +1,62 @@
+using Cashflow.Domain.Repositories;
 using Cashflow.Modules.Consolidado.Entities;
-using Cashflow.Modules.Consolidado.Repositories;
 using Dapper;
-using Npgsql;
 
 namespace Cashflow.Modules.Consolidado.Repositories;
 
-public sealed class ConsolidadoRepository(NpgsqlDataSource dataSource)
-    : IConsultaConsolidado, IProjecaoConsolidado
+public sealed class ConsolidadoRepository(ConsolidadoDbContext dbContext) : IConsolidadoRepository
 {
     private sealed record ConsolidadoRow(decimal SaldoDia, decimal SaldoAcumulado);
 
-    public async Task<ConsolidadoDiario?> ObterAsync(
-        Guid comercianteId, DateOnly data, CancellationToken ct)
-    {
-        await using var conn = await dataSource.OpenConnectionAsync(ct);
+    public IUnitOfWork UnitOfWork => dbContext;
 
-        var linha = await conn.QuerySingleOrDefaultAsync<ConsolidadoRow>("""
+    public async Task<ConsolidadoDiario?> GetAsync(Guid comercianteId, DateOnly data, CancellationToken cancellationToken = default)
+    {
+        var conn = await dbContext.GetConnectionAsync(cancellationToken);
+        var linha = await conn.QuerySingleOrDefaultAsync<ConsolidadoRow>(new CommandDefinition("""
             SELECT saldo_dia AS SaldoDia, saldo_acumulado AS SaldoAcumulado
             FROM consolidado_diario
-            WHERE comerciante_id = @comerciante AND data = @data
-            """, new { comerciante = comercianteId, data });
+            WHERE comerciante_id = @comercianteId AND data = @data
+            """, new { comercianteId, data }, dbContext.CurrentTransaction, cancellationToken: cancellationToken));
 
-        return linha is null
-            ? null
-            : new ConsolidadoDiario(comercianteId, data, linha.SaldoDia, linha.SaldoAcumulado);
+        return linha is null ? null : new ConsolidadoDiario(comercianteId, data, linha.SaldoDia, linha.SaldoAcumulado);
     }
 
-    public async Task<decimal> SaldoAnteriorAsync(
-        Guid comercianteId, DateOnly data, CancellationToken ct)
+    public async Task<decimal> SaldoAnteriorAsync(Guid comercianteId, DateOnly data, CancellationToken cancellationToken = default)
     {
-        await using var conn = await dataSource.OpenConnectionAsync(ct);
-
-        return await conn.ExecuteScalarAsync<decimal?>("""
+        var conn = await dbContext.GetConnectionAsync(cancellationToken);
+        return await conn.ExecuteScalarAsync<decimal?>(new CommandDefinition("""
             SELECT saldo_acumulado FROM consolidado_diario
-            WHERE comerciante_id = @comerciante AND data < @data
+            WHERE comerciante_id = @comercianteId AND data < @data
             ORDER BY data DESC LIMIT 1
-            """, new { comerciante = comercianteId, data }) ?? 0m;
+            """, new { comercianteId, data }, dbContext.CurrentTransaction, cancellationToken: cancellationToken)) ?? 0m;
     }
 
-    public async Task<ProjecaoResultado> AplicarAsync(LancamentoEvento evento, CancellationToken ct)
+    public async Task<ProjecaoResultado> AplicarAsync(MovimentoDoDia movimento, CancellationToken cancellationToken = default)
     {
-        await using var conn = await dataSource.OpenConnectionAsync(ct);
-        await using var tx = await conn.BeginTransactionAsync(ct);
+        var conn = await dbContext.GetConnectionAsync(cancellationToken);
 
-        var inserido = await conn.ExecuteAsync("""
+        var inserido = await conn.ExecuteAsync(new CommandDefinition("""
             INSERT INTO evento_processado (event_id, processado_em)
-            VALUES (@eventId, now())
+            VALUES (@EventId, now())
             ON CONFLICT (event_id) DO NOTHING
-            """, new { eventId = evento.EventId }, tx);
+            """, new { movimento.EventId }, dbContext.CurrentTransaction, cancellationToken: cancellationToken));
 
         if (inserido == 0)
-        {
-            await tx.CommitAsync(ct);
             return ProjecaoResultado.Duplicado;
-        }
 
-        await conn.ExecuteAsync("""
+        await conn.ExecuteAsync(new CommandDefinition("""
             INSERT INTO consolidado_diario (comerciante_id, data, saldo_dia, saldo_acumulado)
-            VALUES (@comerciante, @data, @delta,
+            VALUES (@ComercianteId, @Data, @Delta,
                     COALESCE((SELECT saldo_acumulado FROM consolidado_diario
-                              WHERE comerciante_id = @comerciante AND data < @data
-                              ORDER BY data DESC LIMIT 1), 0) + @delta)
+                              WHERE comerciante_id = @ComercianteId AND data < @Data
+                              ORDER BY data DESC LIMIT 1), 0) + @Delta)
             ON CONFLICT (comerciante_id, data) DO UPDATE
             SET saldo_dia = consolidado_diario.saldo_dia + EXCLUDED.saldo_dia,
                 saldo_acumulado = consolidado_diario.saldo_acumulado + EXCLUDED.saldo_dia
-            """,
-            new { comerciante = evento.ComercianteId, data = evento.Data, delta = evento.Delta }, tx);
+            """, new { movimento.ComercianteId, movimento.Data, movimento.Delta },
+            dbContext.CurrentTransaction, cancellationToken: cancellationToken));
 
-        await tx.CommitAsync(ct);
         return ProjecaoResultado.Aplicado;
     }
 }

@@ -1,22 +1,42 @@
-using Cashflow.Application;
+using Cashflow.BackgroundServer.ConfigurationOptions;
+using Cashflow.Contracts;
+using Cashflow.Domain.Infrastructure.MessageBrokers;
 using Cashflow.Infrastructure;
-using Cashflow.Modules.Consolidado;
-using Cashflow.Modules.Lancamentos;
+using Cashflow.Infrastructure.Web;
+using Cashflow.Modules.Consolidado.MessageBusConsumers;
 using Cashflow.Modules.Lancamentos.Observability;
 
+// Os trabalhos de fundo dos módulos, como o BackgroundServer da referência: o publicador do
+// outbox (Lançamentos) e o consumidor do barramento (Consolidado). Expõe só /health e /metrics.
 var builder = WebApplication.CreateBuilder(args);
+var configuration = builder.Configuration;
 
-builder.AddCashflowInfrastructure("background", LancamentosMetrics.MeterName);
-builder.Services.AddCashflowApplication();
+builder.AddCashflowInfrastructure("background-server", LancamentosMetrics.MeterName);
 
-builder.Services.AddLancamentosModule(opt =>
-    builder.Configuration.GetSection("Modules:Lancamentos").Bind(opt));
-builder.Services.AddHostedServicesLancamentosModule();
+var appSettings = new AppSettings();
+configuration.Bind(appSettings);
 
-builder.Services.AddConsolidadoModule(opt =>
-    builder.Configuration.GetSection("Modules:Consolidado").Bind(opt));
-builder.Services.AddHostedServicesConsolidadoModule();
+var services = builder.Services;
+services.AddApplicationServices();
+services.AddMessageBus();
+
+if (appSettings.Modules.Lancamentos.Enabled)
+{
+    services.AddLancamentosModule(opt => configuration.GetSection("Modules:Lancamentos").Bind(opt));
+    services.AddMessageBusSender<LancamentoEventPayload>(appSettings.MessageBroker);
+    services.AddHostedServicesLancamentosModule();
+}
+
+if (appSettings.Modules.Consolidado.Enabled)
+{
+    services.AddConsolidadoModule(opt => configuration.GetSection("Modules:Consolidado").Bind(opt));
+    services.AddMessageBusReceiver<LancamentoEventConsumer, LancamentoEventPayload>(appSettings.MessageBroker);
+    services.AddHostedServicesConsolidadoModule();
+}
 
 var app = builder.Build();
+
+app.UseCashflowWeb();
+app.MapCashflowEndpoints();
 
 app.Run();

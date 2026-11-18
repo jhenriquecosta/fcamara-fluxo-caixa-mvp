@@ -1,22 +1,17 @@
+using Cashflow.Domain.Entities;
+
 namespace Cashflow.Domain.Repositories;
 
-public interface IConcurrencyHandler<TEntity>
-{
-}
-
 /// <summary>
-/// A forma do repositório da referência. Os módulos usam a porta própria
-/// (ILancamentoRepository, IConsolidadoRepository) por causa do Dapper — a
-/// divergência declarada no ADR-0010.
+/// O repositório da referência, sem o <c>IQueryable</c>: com Dapper (ADR-0006) a consulta é
+/// SQL explícito no repositório específico do módulo, que estende esta interface.
 /// </summary>
 public interface IRepository<TEntity, TKey> : IConcurrencyHandler<TEntity>
-    where TEntity : Entities.Entity<TKey>, Entities.IAggregateRoot
+    where TEntity : Entity<TKey>, IAggregateRoot
 {
     IUnitOfWork UnitOfWork { get; }
 
     Task AddAsync(TEntity entity, CancellationToken cancellationToken = default);
 
-    Task UpdateAsync(TEntity entity, CancellationToken cancellationToken = default);
-
-    void Delete(TEntity entity);
+    Task<TEntity?> GetByIdAsync(TKey id, CancellationToken cancellationToken = default);
 }

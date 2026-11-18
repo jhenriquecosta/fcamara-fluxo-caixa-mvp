@@ -14,6 +14,16 @@ public static class TipoLancamentoExtensions
     public static TipoLancamento Oposto(this TipoLancamento tipo) =>
         tipo == TipoLancamento.Credito ? TipoLancamento.Debito : TipoLancamento.Credito;
 
-    public static bool TryParseTexto(string? texto, out TipoLancamento tipo) =>
-        Enum.TryParse(texto ?? string.Empty, ignoreCase: true, out tipo) && Enum.IsDefined(tipo);
+    /// <summary>Só "debito" ou "credito": o <c>Enum.TryParse</c> aceitaria "0" e "1", fora do contrato.</summary>
+    public static bool TryParseTexto(string? texto, out TipoLancamento tipo)
+    {
+        if (string.Equals(texto, "credito", StringComparison.OrdinalIgnoreCase))
+        {
+            tipo = TipoLancamento.Credito;
+            return true;
+        }
+
+        tipo = TipoLancamento.Debito;
+        return string.Equals(texto, "debito", StringComparison.OrdinalIgnoreCase);
+    }
 }

@@ -1,14 +1,14 @@
-using Cashflow.Application;
-using Cashflow.Infrastructure.Data;
+using System.Reflection;
+using Cashflow.Contracts;
+using Cashflow.Domain.Infrastructure.MessageBrokers;
+using Cashflow.Infrastructure.HostedServices;
+using Cashflow.Infrastructure.Persistence;
 using Cashflow.Modules.Consolidado.ConfigurationOptions;
-using Cashflow.Modules.Consolidado.Commands;
-using Cashflow.Modules.Consolidado.HostedServices;
-using Cashflow.Modules.Consolidado.Observability;
+using Cashflow.Modules.Consolidado.MessageBusConsumers;
 using Cashflow.Modules.Consolidado.Repositories;
-using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
-namespace Cashflow.Modules.Consolidado;
+namespace Microsoft.Extensions.DependencyInjection;
 
 public static class ConsolidadoModuleServiceCollectionExtensions
 {
@@ -19,26 +19,24 @@ public static class ConsolidadoModuleServiceCollectionExtensions
         configureOptions(settings);
         services.Configure(configureOptions);
 
-        services.AddCashflowPostgres(settings.ConnectionStrings.Default);
-        services.AddSingleton<ConsolidadoMetrics>();
-        services.AddSingleton<ConsolidadoRepository>();
-        services.AddSingleton<IConsultaConsolidado>(sp => sp.GetRequiredService<ConsolidadoRepository>());
-        services.AddSingleton<IProjecaoConsolidado>(sp => sp.GetRequiredService<ConsolidadoRepository>());
-        services.AddMessageHandlers(typeof(ConsolidadoModuleServiceCollectionExtensions).Assembly);
-        services.AddTransient<ConsultarConsolidadoHandler>();
-        services.AddTransient<ProjetarEventoHandler>();
+        services.AddModuleDataSource(ConsolidadoModuleOptions.Key, settings.ConnectionStrings.Default);
+        services.AddScoped<ConsolidadoDbContext>();
+        services.AddScoped<IConsolidadoRepository, ConsolidadoRepository>();
+
+        services.AddMessageHandlers(Assembly.GetExecutingAssembly());
 
         return services;
     }
 
+    /// <summary>O consumidor do barramento: carregado pelo BackgroundServer, nunca pela API.</summary>
     public static IServiceCollection AddHostedServicesConsolidadoModule(this IServiceCollection services)
     {
-        services.AddHostedService<ConsolidadoConsumer>();
+        services.AddMessageBusConsumers(Assembly.GetExecutingAssembly());
+        services.AddHostedService<MessageBusConsumerBackgroundService<LancamentoEventConsumer, LancamentoEventPayload>>();
         return services;
     }
 
-    public static Task ApplyConsolidadoSchemaAsync(
-        this NpgsqlDataSource dataSource, CancellationToken ct = default) =>
-        SqlSchema.ApplyAsync(dataSource, typeof(ConsolidadoModuleServiceCollectionExtensions).Assembly,
+    public static Task MigrateConsolidadoDbAsync(this NpgsqlDataSource dataSource, CancellationToken ct = default) =>
+        SqlSchema.ApplyAsync(dataSource, Assembly.GetExecutingAssembly(),
             "Cashflow.Modules.Consolidado.Repositories.Schema.sql", ct);
 }
