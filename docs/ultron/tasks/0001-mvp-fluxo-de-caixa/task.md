@@ -50,7 +50,7 @@ Artefatos de referência: `docs/requisitos/requisitos.md` (PRD-0001), `docs/ultr
 
 | Fatia | Título | Issue | Estado |
 |---|---|---|---|
-| 1 | Lançamentos ponta a ponta | #2 | aberta |
+| 1 | Lançamentos ponta a ponta | #2 | fechada (local) |
 | 2 | Evento e consolidado do dia | #3 | aberta |
 | 3 | Estorno imutável | #4 | aberta |
 | 4 | Resiliência, observabilidade e carga | #5 | aberta |
