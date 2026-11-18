@@ -18,10 +18,16 @@ curl -fsS -X PUT "$ES/_index_template/cashflow-logs" \
   --data-binary @"$DIR/elasticsearch/index-templates/cashflow-logs.json" >/dev/null
 
 echo "→ Data view no Kibana"
-curl -fsS -X POST "$KIBANA/api/data_views/data_view" \
-  -H 'kbn-xsrf: true' \
-  -H 'Content-Type: application/json' \
-  -d '{"data_view":{"title":"cashflow-logs-*","name":"Logs — fluxo de caixa","timeFieldName":"@timestamp"}}' >/dev/null \
-  || echo "  (data view já existe ou Kibana ainda não subiu)"
+for tentativa in 1 2 3 4 5; do
+  if curl -fsS -X POST "$KIBANA/api/data_views/data_view" \
+      -H 'kbn-xsrf: true' \
+      -H 'Content-Type: application/json' \
+      -d '{"data_view":{"title":"cashflow-logs-*","name":"Logs — fluxo de caixa","timeFieldName":"@timestamp","allowNoIndex":true}}' >/dev/null 2>&1; then
+    echo "  data view criada"
+    break
+  fi
+  echo "  data view já existe ou o índice ainda não apareceu (tentativa $tentativa)"
+  sleep 3
+done
 
 echo "ELK aplicado. Kibana: $KIBANA · Elasticsearch: $ES"

@@ -43,7 +43,7 @@ Artefatos de referência: `docs/requisitos/requisitos.md` (PRD-0001), `docs/ultr
 - [x] [AC9] Quando o consolidado recebe 50 requisições por segundo em teste local, a taxa de sucesso é de pelo menos 95%.
 - [x] [AC10] Quando a consulta do consolidado é feita, a resposta traz `saldoDia`, `saldoAnterior` e `saldoAcumulado` do comerciante e do dia pedidos.
 - [x] [AC11] Quando a requisição não tem token válido, a API responde `401`; sem o escopo exigido, `403`.
-- [ ] [AC12] Quando um comando do README é seguido em uma máquina limpa, o ambiente local sobe e o fluxo ponta a ponta funciona.
+- [x] [AC12] Quando um comando do README é seguido em uma máquina limpa, o ambiente local sobe e o fluxo ponta a ponta funciona.
 - [x] [AC13] Quando um retry concorrente com a mesma `Idempotency-Key` chega enquanto o original ainda processa, a API responde `409`.
 
 ## Fatias publicadas
@@ -54,7 +54,7 @@ Artefatos de referência: `docs/requisitos/requisitos.md` (PRD-0001), `docs/ultr
 | 2 | Evento e consolidado do dia | #3 | fechada (local) |
 | 3 | Estorno imutável | #4 | fechada (local) |
 | 4 | Resiliência, observabilidade e carga | #5 | fechada (local) |
-| 5 | Execução local e README | #6 | aberta |
+| 5 | Execução local e README | #6 | fechada (local) |
 | 6 | Documentação dos diferenciais | #7 | fechada (local) |
 
 ## Exceções registradas (escape consciente)
