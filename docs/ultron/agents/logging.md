@@ -8,29 +8,28 @@
 
 ## Formato
 
-JSON Lines — um evento por linha, em `logs/{serviço}.log` e no console. O mesmo formato alimenta o Elasticsearch (local) e o CloudWatch Logs (alvo AWS): nada é reescrito para trocar de destino.
+JSON Lines — o Serilog escreve o **Compact JSON** (`@t`, `@l`, `@mt`) e os enrichers acrescentam `service`/`env` e a correlação. O mesmo arquivo alimenta o Elasticsearch (local) e o CloudWatch Logs (alvo): nada é reescrito para trocar de destino. O sink do Elasticsearch acrescenta o `@timestamp`, que o Kibana usa como campo de tempo.
 
 ```json
-{"ts":"2026-11-18T20:40:00.123Z","level":"INFO","context":"Lancamentos.Api","service":"lancamentos","env":"dev","msg":"lançamento registrado","correlation_id":"4bf92f3577b34da6","trace_id":"4bf92f3577b34da6","request_id":"a1b2c3","lancamento_id":"...","comerciante_hash":"...","tipo":"debito","valor":100.00,"status":201,"duration_ms":18}
+{"@t":"2026-11-18T21:26:14.554Z","@l":"Information","@mt":"lançamento registrado {LancamentoId} {ComercianteHash} {Tipo} {Valor} {EventId}","SourceContext":"Cashflow.Lancamentos.Api.Application.LancamentoService","service":"lancamentos","env":"Development","request_id":"a1b2c3","correlation_id":"4bf92f3577b34da6","trace_id":"4bf92f3577b34da6","LancamentoId":"...","ComercianteHash":"...","Tipo":"debito","Valor":100.00,"EventId":"..."}
 ```
 
 ## Campos
 
 | Campo | Obrigatório | Descrição |
 |---|---|---|
-| `ts` | sim | ISO 8601 com milissegundos, UTC |
-| `level` | sim | DEBUG · INFO · WARN · ERROR · FATAL |
-| `context` | sim | módulo/classe/serviço de origem |
-| `service` | sim | `lancamentos` ou `consolidado` |
-| `env` | sim | `dev`, `test` ou o ambiente do alvo |
-| `msg` | sim | mensagem curta, sem dado sensível |
-| `correlation_id` | sim | rastreia a operação entre os serviços (equivale ao `trace_id` W3C quando houver) |
-| `trace_id` / `span_id` | quando houver OpenTelemetry | propagação W3C |
-| `request_id` | sim em requisição HTTP | gerado ou recebido no header `X-Request-Id`, devolvido na resposta |
-| `comerciante_hash` | quando houver negócio | hash do `comercianteId`; nunca o id cru em log compartilhado |
-| `lancamento_id`, `event_id` | quando houver | identificadores de negócio e do evento |
-| `duration_ms`, `status` | em requisição e consumo | duração e código HTTP/resultado |
-| `dlt` | em falha persistente | `true` quando o evento vai à DLT |
+| `@t` | sim | ISO 8601 com milissegundos, UTC (timestamp do Compact JSON) |
+| `@l` | sim | nível: Information · Warning · Error · Fatal |
+| `@mt` | sim | template da mensagem, sem dado sensível |
+| `SourceContext` | sim | origem (classe/serviço) |
+| `service` | sim | `lancamentos` ou `consolidado` (enricher) |
+| `env` | sim | o ambiente do host (enricher) |
+| `request_id`, `correlation_id`, `trace_id` | em requisição HTTP | o middleware aceita/gera o `X-Request-Id` e propaga o trace W3C |
+| `ComercianteHash` | quando houver negócio | hash do `comercianteId`; nunca o id cru |
+| `LancamentoId`, `EventId` | quando houver | identificadores de negócio e do evento |
+| `@timestamp` | no Elasticsearch | o sink acrescenta; é o campo de tempo do Kibana |
+
+Os campos de negócio aparecem com o nome da propriedade do template (PascalCase); a convenção vale para o conteúdo, não para a capitalização.
 
 ## Destino e ciclo de vida
 

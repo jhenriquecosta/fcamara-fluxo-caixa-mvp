@@ -22,7 +22,7 @@ for tentativa in 1 2 3 4 5; do
   if curl -fsS -X POST "$KIBANA/api/data_views/data_view" \
       -H 'kbn-xsrf: true' \
       -H 'Content-Type: application/json' \
-      -d '{"data_view":{"title":"cashflow-logs-*","name":"Logs — fluxo de caixa","timeFieldName":"@timestamp","allowNoIndex":true}}' >/dev/null 2>&1; then
+      -d '{"data_view":{"title":"cashflow-logs-*","name":"Logs do fluxo de caixa","timeFieldName":"@timestamp","allowNoIndex":true}}' >/dev/null 2>&1; then
     echo "  data view criada"
     break
   fi

@@ -24,6 +24,11 @@ docker compose up -d --build
 observability/scripts/apply-elk.sh   # template de índice, ILM e data view do Kibana
 ```
 
+> Se a stack já existia de uma execução anterior, rode `docker compose down -v` antes: o init do PostgreSQL cria os usuários por serviço só na primeira subida do volume.
+
+```bash
+```
+
 | Serviço | URL |
 |---|---|
 | Lançamentos (API) | http://localhost:8080 |

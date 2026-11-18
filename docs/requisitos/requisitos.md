@@ -6,7 +6,7 @@
 | **Projeto** | fcamara-fluxo-caixa-mvp |
 | **Autor** | ULTRON · skill ultron-prd — Operador: J Henrique Costa |
 | **Data** | 2026-11-18 |
-| **Versão do documento** | 1.2 |
+| **Versão do documento** | 1.3 |
 | **Status** | draft |
 | **Rastreabilidade** | Desafio técnico Carrefour (via FCamara) · repositório público · sem issue/task |
 
@@ -54,7 +54,7 @@ O alvo é AWS (Route 53, ALB/WAF, Cognito, ECS Fargate, RDS PostgreSQL, MSK, Clo
 | ID | Requisito | Comportamento observável |
 |---|---|---|
 | **RF-1** | Registrar lançamento | `POST /api/v1/lancamentos` com o header `Idempotency-Key`. Corpo: `{ "valor": 100.00, "tipo": "debito" \| "credito", "descricao": "opcional" }`. O `comercianteId` vem do token, nunca do corpo; o **dia do lançamento** é atribuído pelo servidor (dia do registro em `America/Sao_Paulo`), não pelo cliente. Resposta `201` com o id e os dados gravados. `valor > 0`; `tipo` fora do enum é rejeitado (`422`). |
-| **RF-2** | Idempotência | Mesma `Idempotency-Key` + mesmo corpo → a resposta original, sem novo lançamento. Mesma chave + corpo diferente → `422 Unprocessable Content`; retry concorrente enquanto o original processa → `409 Conflict`. A chave e o hash do corpo são gravados na mesma transação do lançamento. |
+| **RF-2** | Idempotência | Mesma `Idempotency-Key` + mesmo corpo → a resposta original, sem novo lançamento. Mesma chave + corpo diferente → `422 Unprocessable Content`; retry concorrente enquanto o original processa → `409 Conflict`. A chave é reivindicada numa transação própria (commitada antes do trabalho, o que permite o `409` concorrente); o lançamento, o evento e a resposta da chave são gravados na transação do lançamento. |
 | **RF-3** | Estornar lançamento | `POST /api/v1/lancamentos/{id}/estornos`, também com `Idempotency-Key`. Cria um **novo lançamento** de tipo oposto, com o mesmo valor, datado no dia do estorno. O original nunca é editado. Cada lançamento admite no máximo um estorno; um segundo → `409`. Um estorno não pode ser estornado (`422`). |
 | **RF-4** | Evento de outbox | Na mesma transação do lançamento, grava o evento de outbox. O publicador lê os pendentes em lotes com `FOR UPDATE SKIP LOCKED`, publica no tópico `cashflow.lancamentos.v1` com `acks=all`, chave `comercianteId`, e marca `published_at`. A entrega é at-least-once. |
 | **RF-5** | Consumo idempotente | O consumidor valida o schema, verifica o `eventId` em `evento_processado`, ignora repetidos e aplica o valor à projeção do dia na mesma transação. Falha: 1 + 3 tentativas (1 s, 2 s, 4 s) e envio para a DLT. |
@@ -186,6 +186,7 @@ Sem dependências externas gerenciadas — não há lockfile nesta entrega ainda
 | 1.0 | 2026-11-18 | ULTRON · ultron-prd | Criação do PRD de requisitos do MVP |
 | 1.1 | 2026-11-18 | ULTRON · ultron-prd | Alinha .NET 10 LTS e a semântica 422/409 ao Research #0001 e ao ADR-0004 |
 | 1.2 | 2026-11-18 | ULTRON · ultron-prd | Aceita o ADR-0005 — dia do registro atribuído pelo servidor; retroativo fora de escopo |
+| 1.3 | 2026-11-18 | ULTRON · ultron-prd | Alinha o RF-2 à reivindicação em duas fases do ADR-0004 |
 
 **Rastreabilidade.** Desafio técnico Carrefour (via FCamara) › repositório `fcamara-fluxo-caixa-mvp` › sem issue/task › este documento.
 

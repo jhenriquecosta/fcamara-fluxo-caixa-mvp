@@ -87,6 +87,9 @@ public sealed class LancamentoService
     private static string HashComerciante(Guid id) =>
         Convert.ToHexString(SHA256.HashData(id.ToByteArray()))[..16].ToLowerInvariant();
 
+    private static string HashChave(string chave) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(chave)))[..16].ToLowerInvariant();
+
     private enum ClaimResultado { Reivindicado, Replay, PayloadDivergente, EmProcessamento }
 
     private static async Task<(ClaimResultado resultado, string? respostaJson)> ReivindicarAsync(
@@ -149,18 +152,18 @@ public sealed class LancamentoService
         {
             case ClaimResultado.PayloadDivergente:
                 _metrics.ConflitoPayload();
-                _logger.LogWarning("idempotência com payload divergente {ComercianteHash} {Chave}",
-                    comercianteHash, comando.IdempotencyKey);
+                _logger.LogWarning("idempotência com payload divergente {ComercianteHash} {ChaveHash}",
+                    comercianteHash, HashChave(comando.IdempotencyKey));
                 return new RegistroResultado.PayloadDivergente();
             case ClaimResultado.EmProcessamento:
                 _metrics.ConflitoConcorrente();
-                _logger.LogWarning("requisição em processamento para a chave {ComercianteHash} {Chave}",
-                    comercianteHash, comando.IdempotencyKey);
+                _logger.LogWarning("requisição em processamento para a chave {ComercianteHash} {ChaveHash}",
+                    comercianteHash, HashChave(comando.IdempotencyKey));
                 return new RegistroResultado.EmProcessamento();
             case ClaimResultado.Replay:
                 _metrics.Idempotente();
-                _logger.LogInformation("lançamento idempotente devolvido {ComercianteHash} {Chave}",
-                    comercianteHash, comando.IdempotencyKey);
+                _logger.LogInformation("lançamento idempotente devolvido {ComercianteHash} {ChaveHash}",
+                    comercianteHash, HashChave(comando.IdempotencyKey));
                 return new RegistroResultado.Idempotente(replayJson!);
         }
 
