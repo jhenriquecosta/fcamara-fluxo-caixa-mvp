@@ -6,7 +6,7 @@
 | **Projeto** | fcamara-fluxo-caixa-mvp |
 | **Autor** | ULTRON · skill ultron-prd — Operador: J Henrique Costa |
 | **Data** | 2026-11-18 |
-| **Versão do documento** | 1.0 |
+| **Versão do documento** | 1.2 |
 | **Status** | draft |
 | **Rastreabilidade** | Desafio técnico Carrefour (via FCamara) · repositório público · sem issue/task |
 
@@ -29,7 +29,7 @@ Uma solução em dois serviços, com comunicação por eventos:
 - **Lançamentos** valida e grava o lançamento, a chave de idempotência e o evento de outbox na mesma transação; publica o evento no Kafka. O estorno é um novo lançamento.
 - **Consolidado** consome o evento, ignora repetidos e mantém a projeção diária por comerciante; responde `saldoDia`, `saldoAnterior` e `saldoAcumulado`. A consulta lê só a projeção e nunca chama Lançamentos.
 
-O alvo é AWS (Route 53, ALB/WAF, Cognito, ECS Fargate, RDS PostgreSQL, MSK, CloudWatch, Secrets Manager/KMS), registrado no ADR-010. O MVP roda localmente em docker compose, com Postgres e Kafka, e prova os mecanismos críticos: idempotência, outbox, consumo com DLT e consolidação. A stack do MVP é **.NET** — stack do Carrefour.
+O alvo é AWS (Route 53, ALB/WAF, Cognito, ECS Fargate, RDS PostgreSQL, MSK, CloudWatch, Secrets Manager/KMS), registrado no ADR-010. O MVP roda localmente em docker compose, com Postgres e Kafka, e prova os mecanismos críticos: idempotência, outbox, consumo com DLT e consolidação. A stack do MVP é **.NET 10 LTS** — stack do Carrefour.
 
 ## 3. Histórias de usuário
 
@@ -53,8 +53,8 @@ O alvo é AWS (Route 53, ALB/WAF, Cognito, ECS Fargate, RDS PostgreSQL, MSK, Clo
 
 | ID | Requisito | Comportamento observável |
 |---|---|---|
-| **RF-1** | Registrar lançamento | `POST /api/v1/lancamentos` com o header `Idempotency-Key`. Corpo: `{ "data": "YYYY-MM-DD", "valor": 100.00, "tipo": "debito" \| "credito", "descricao": "opcional" }`. O `comercianteId` vem do token, nunca do corpo. Resposta `201` com o id e os dados gravados. `valor > 0`; `tipo` fora do enum é rejeitado (`422`). |
-| **RF-2** | Idempotência | Mesma `Idempotency-Key` + mesmo corpo → a resposta original, sem novo lançamento. Mesma chave + corpo diferente → `409 Conflict`. A chave e o hash do corpo são gravados na mesma transação do lançamento. |
+| **RF-1** | Registrar lançamento | `POST /api/v1/lancamentos` com o header `Idempotency-Key`. Corpo: `{ "valor": 100.00, "tipo": "debito" \| "credito", "descricao": "opcional" }`. O `comercianteId` vem do token, nunca do corpo; o **dia do lançamento** é atribuído pelo servidor (dia do registro em `America/Sao_Paulo`), não pelo cliente. Resposta `201` com o id e os dados gravados. `valor > 0`; `tipo` fora do enum é rejeitado (`422`). |
+| **RF-2** | Idempotência | Mesma `Idempotency-Key` + mesmo corpo → a resposta original, sem novo lançamento. Mesma chave + corpo diferente → `422 Unprocessable Content`; retry concorrente enquanto o original processa → `409 Conflict`. A chave e o hash do corpo são gravados na mesma transação do lançamento. |
 | **RF-3** | Estornar lançamento | `POST /api/v1/lancamentos/{id}/estornos`, também com `Idempotency-Key`. Cria um **novo lançamento** de tipo oposto, com o mesmo valor, datado no dia do estorno. O original nunca é editado. Cada lançamento admite no máximo um estorno; um segundo → `409`. Um estorno não pode ser estornado (`422`). |
 | **RF-4** | Evento de outbox | Na mesma transação do lançamento, grava o evento de outbox. O publicador lê os pendentes em lotes com `FOR UPDATE SKIP LOCKED`, publica no tópico `cashflow.lancamentos.v1` com `acks=all`, chave `comercianteId`, e marca `published_at`. A entrega é at-least-once. |
 | **RF-5** | Consumo idempotente | O consumidor valida o schema, verifica o `eventId` em `evento_processado`, ignora repetidos e aplica o valor à projeção do dia na mesma transação. Falha: 1 + 3 tentativas (1 s, 2 s, 4 s) e envio para a DLT. |
@@ -92,7 +92,7 @@ Os requisitos marcados **`(enunciado)`** vêm do desafio. Os marcados **`(propos
 
 **Banco.** PostgreSQL. Dois bancos lógicos — `lancamentos` e `consolidado` — com usuários próprios por serviço, na mesma instância no MVP. A separação é lógica, não física: uma queda da instância afeta os dois serviços. O RNF-1 é atendido no nível de aplicação (consolidado fora não impede lançamentos); para atendê-lo também no nível de infraestrutura, a evolução é separar as instâncias — registrado no ADR de trade-offs.
 
-**.NET.** ASP.NET Core nos dois serviços. As notas de JDBC do ADR-010 traduzem-se para o pool de conexões do Npgsql; o publicador do outbox e o consumidor rodam como `BackgroundService` no mesmo executável do serviço, separáveis no alvo (como o ADR-010 prevê). xUnit nos testes.
+**.NET.** ASP.NET Core nos dois serviços, em **.NET 10 LTS** — o .NET 8 e o .NET 9 saíram de suporte em 10/11/2026 (Research #0001). As notas de JDBC do ADR-010 traduzem-se para o pool de conexões do Npgsql; o publicador do outbox e o consumidor rodam como `BackgroundService` no mesmo executável do serviço, separáveis no alvo (como o ADR-010 prevê). Clientes e testes estão detalhados no ADR-0006: Confluent.Kafka 2.16.0, Npgsql 10.0.3 + Dapper 2.1.79, xUnit v3 + Testcontainers.
 
 **Contrato do evento.** Envelope JSON versionado:
 
@@ -146,13 +146,14 @@ Sem dependências externas gerenciadas — não há lockfile nesta entrega ainda
 - Provisionamento da AWS; o alvo é desenho, o que roda é local.
 - ERP ou contabilidade completa: notas fiscais, impostos, multimoeda.
 - Consolidação em tempo real; o consolidado é diário e eventualmente consistente.
+- Lançamento retroativo; o dia do lançamento é o dia do registro, atribuído pelo servidor (ADR-0005).
 - Migração de legado em código; a arquitetura de transição é um diferencial documentado.
 - Multi-região e recuperação de desastre; RPO/RTO são metas propostas, não validadas.
 - Um token representando vários comerciantes; no MVP, um token pertence a um comerciante.
 
 ## 10. Observações
 
-- **Pesquisa dispensada:** não há questão de fato externo em aberto que exija `/ultron-research`. As decisões de tecnologia vêm do ADR-010 e do contexto do cliente (.NET). O que falta é justificativa registrada, não descoberta.
+- **Pesquisa realizada:** o Research #0001 (18/11/2026) fundamentou a stack (.NET 10 LTS), o barramento (Kafka 4.x em KRaft), o outbox e a semântica de idempotência (422 para payload diferente, 409 para requisição em processamento). As decisões completas estão nos ADRs 0001–0006.
 - **Diferenciais do desafio:** arquitetura de transição, estimativa de custos, observabilidade e critérios de segurança para consumo dos serviços entram como documentos próprios.
 - **Prazo:** entrega em 20/11/2026 pela manhã.
 - **Local do documento:** não há task — este PRD é a entrega de requisitos da solução, e vive em `docs/requisitos/` para ser lido pela banca. O rito de PRD por task não se aplica a uma entrega de solução.
@@ -162,7 +163,7 @@ Sem dependências externas gerenciadas — não há lockfile nesta entrega ainda
 
 - [AC1] Quando um lançamento válido é enviado com `Idempotency-Key`, a API responde `201` e o movimento aparece no consolidado do dia.
 - [AC2] Quando a mesma `Idempotency-Key` e o mesmo corpo são reenviados, a API devolve a resposta original e não cria um segundo lançamento.
-- [AC3] Quando a mesma `Idempotency-Key` é usada com corpo diferente, a API responde `409`.
+- [AC3] Quando a mesma `Idempotency-Key` é usada com corpo diferente, a API responde `422`.
 - [AC4] Quando um lançamento existente é estornado, um novo lançamento de tipo oposto é criado e o original permanece inalterado.
 - [AC5] Quando um segundo estorno do mesmo original é pedido, a API responde `409`; estornar um estorno responde `422`.
 - [AC6] Quando o evento de um lançamento é entregue duas vezes, o consolidado soma o valor uma única vez.
@@ -172,16 +173,19 @@ Sem dependências externas gerenciadas — não há lockfile nesta entrega ainda
 - [AC10] Quando a consulta do consolidado é feita, a resposta traz `saldoDia`, `saldoAnterior` e `saldoAcumulado` do comerciante e do dia pedidos.
 - [AC11] Quando a requisição não tem token válido, a API responde `401`; sem o escopo exigido, `403`.
 - [AC12] Quando um comando do README é seguido em uma máquina limpa, o ambiente local sobe e o fluxo ponta a ponta funciona.
+- [AC13] Quando um retry concorrente com a mesma `Idempotency-Key` chega enquanto o original ainda processa, a API responde `409`.
 
 ---
 
-**Proveniência.** Enunciado do desafio (Descritivo da Solução e Requisitos), ADR-010 (`docs/requisitos/Arquietura-solucao-v2.png`), `docs/ultron/agents/solution.md` (`## Visão` e `## Arquitetura de negócio`) e o blueprint de negócio em `docs/ultron/agents/business/`. Os números de RNF-1 e RNF-2 vêm do enunciado; os de RNF-3 a RNF-5 são metas propostas, marcadas como tal.
+**Proveniência.** Enunciado do desafio (Descritivo da Solução e Requisitos), ADR-010 (`docs/requisitos/Arquietura-solucao-v2.png`), `docs/ultron/agents/solution.md` (`## Visão` e `## Arquitetura de negócio`), o blueprint de negócio em `docs/ultron/agents/business/`, o Research #0001 (`docs/ultron/agents/research/0001-fatos-2026.md`) e os ADRs 0001–0006 (`docs/ultron/agents/adr/`). Os números de RNF-1 e RNF-2 vêm do enunciado; os de RNF-3 a RNF-5 são metas propostas, marcadas como tal.
 
 **Histórico de versões.**
 
 | Versão | Data | Autor | Mudança |
 |---|---|---|---|
 | 1.0 | 2026-11-18 | ULTRON · ultron-prd | Criação do PRD de requisitos do MVP |
+| 1.1 | 2026-11-18 | ULTRON · ultron-prd | Alinha .NET 10 LTS e a semântica 422/409 ao Research #0001 e ao ADR-0004 |
+| 1.2 | 2026-11-18 | ULTRON · ultron-prd | Aceita o ADR-0005 — dia do registro atribuído pelo servidor; retroativo fora de escopo |
 
 **Rastreabilidade.** Desafio técnico Carrefour (via FCamara) › repositório `fcamara-fluxo-caixa-mvp` › sem issue/task › este documento.
 
