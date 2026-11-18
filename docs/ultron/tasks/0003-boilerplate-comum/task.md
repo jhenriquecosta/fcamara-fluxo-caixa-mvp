@@ -2,9 +2,10 @@
 
 tipo: refactor
 branch: refactor/0003-boilerplate-comum
-estado: em andamento
+publicacao: pendente
+estado: concluído
 responsavel: jhenriquecosta@hotmail.com
-next_skill: ultron-coder
+next_skill: 
 issue: #11
 
 ## Contexto
