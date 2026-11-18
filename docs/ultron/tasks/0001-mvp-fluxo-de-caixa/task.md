@@ -3,7 +3,7 @@
 tipo: feature
 branch: feature/0001-mvp-fluxo-de-caixa
 slices_fechados: #2, #3, #4, #5, #7, #6
-publicacao: pendente
+publicacao: https://github.com/jhenriquecosta/fcamara-fluxo-caixa-mvp/pull/8
 estado: concluído
 responsavel: jhenriquecosta@hotmail.com
 next_skill: 
