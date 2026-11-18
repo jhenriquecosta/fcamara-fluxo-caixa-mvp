@@ -13,7 +13,7 @@ Um comerciante precisa controlar o fluxo de caixa diário e consultar o saldo co
 - O estorno é um **novo lançamento** de tipo oposto; o original nunca é editado.
 - O desenho-base está em [`docs/requisitos/Arquietura-solucao-v2.png`](docs/requisitos/Arquietura-solucao-v2.png); o texto com os diagramas C4 e o mapeamento local ↔ AWS está em [`docs/arquitetura/arquitetura-alvo.md`](docs/arquitetura/arquitetura-alvo.md).
 
-Decisões registradas em [ADRs](docs/ultron/agents/adr/): estilo event-driven com outbox (0001), Kafka em KRaft (0002), PostgreSQL com bancos lógicos (0003), idempotência e estorno (0004), projeção e dia do registro (0005), stack .NET 10 (0006) e estrutura em camadas com lib comum (0007). Os requisitos estão no [PRD](docs/requisitos/requisitos.md).
+Decisões registradas em [ADRs](docs/ultron/agents/adr/): estilo event-driven com outbox (0001), Kafka em KRaft (0002), PostgreSQL com bancos lógicos (0003), idempotência e estorno (0004), projeção e dia do registro (0005), stack .NET 10 (0006), estrutura em camadas com lib comum (0007) e a avaliação de event sourcing contra o ledger com outbox (0008). Os requisitos estão no [PRD](docs/requisitos/requisitos.md).
 
 ## Como rodar localmente
 
