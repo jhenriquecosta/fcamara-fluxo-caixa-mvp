@@ -27,7 +27,8 @@ Vamos implementar **dois serviços** — Lançamentos e Consolidado — comunica
 - **Monolito único** — rejeitado: contraria o requisito de negócio (dois serviços) e enfraquece o isolamento de falha; a carga do consolidado competiria com o registro no mesmo processo e no mesmo pool.
 - **Dois serviços com chamadas síncronas** — rejeitado: a falha do consolidado derrubaria o registro; a latência ficaria acoplada; o RNF explícito do desafio seria violado.
 - **Dois serviços com fila simples (SQS)** — rejeitado: perde ordem por comerciante, replay e visibilidade de lag, que o consolidado usa para reconstruir a projeção. O trade-off completo está no ADR-0002.
-- **Outbox + Kafka + projeção** — escolhido.
+- **Event sourcing completo** — rejeitado para este escopo: o lançamento é um fato único, sem ciclo de vida de agregado a reconstruir; trocar a fonte da verdade para os eventos exigiria reidratação, versões otimistas, snapshots, upcasting e consistência eventual de todas as leituras, sem um driver de negócio que o pague. A análise completa e os gatilhos de evolução estão no ADR-0008.
+- **Outbox + Kafka + projeção** — escolhido. O ledger é append-only e o evento é o fato publicado — o híbrido registrado no ADR-0008.
 
 ## Consequências
 
