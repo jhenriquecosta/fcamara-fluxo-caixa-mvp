@@ -55,3 +55,7 @@ Artefatos de referência: `docs/requisitos/requisitos.md` (PRD-0001), `docs/ultr
 | 4 | Resiliência, observabilidade e carga | #5 | aberta |
 | 5 | Execução local e README | #6 | aberta |
 | 6 | Documentação dos diferenciais | #7 | aberta |
+
+## Exceções registradas (escape consciente)
+
+- **Portão verify, fatia 1 (#2), 2026-11-18:** o `verify_all.sh` executa `dotnet test --no-build -q`; o runner do xUnit v3 / Microsoft.Testing.Platform não aceita `-q` (opção desconhecida). A suíte foi executada manualmente com `dotnet test --solution Cashflow.slnx` — **9/9 verdes** — e o build estava verde. O portão volta a valer quando o comando do arsenal for alinhado ao MTP.
