@@ -1,0 +1,82 @@
+groups:
+  - name: cashflow.alerts
+    rules:
+      - alert: CashflowHighErrorRate
+        expr: job:cashflow_error_rate:5m > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          service: cashflow
+        annotations:
+          summary: "Taxa de erro acima de 5% ({{ $value | humanizePercentage }})"
+          description: "Serviço {{ $labels.service }} com erro acima do limiar. Ver observability/README.md."
+
+      - alert: CashflowLatencyP95Lancamentos
+        expr: job:http_server_request_duration_seconds:p95{service="lancamentos"} > 0.3
+        for: 5m
+        labels:
+          severity: warning
+          service: lancamentos
+        annotations:
+          summary: "p95 dos lançamentos acima de 300 ms"
+          description: "p95 atual: {{ $value | humanizeDuration }}. Alvo proposto no SLO."
+
+      - alert: CashflowLatencyP95Consolidado
+        expr: job:http_server_request_duration_seconds:p95{service="consolidado"} > 0.2
+        for: 5m
+        labels:
+          severity: warning
+          service: consolidado
+        annotations:
+          summary: "p95 do consolidado acima de 200 ms"
+          description: "p95 atual: {{ $value | humanizeDuration }}. Alvo proposto no SLO."
+
+      - alert: CashflowOutboxAgeHigh
+        expr: max(cashflow_outbox_pending_age_seconds) > 10
+        for: 5m
+        labels:
+          severity: warning
+          service: lancamentos
+        annotations:
+          summary: "Evento mais antigo no outbox há mais de 10 s"
+          description: "O publicador está atrasado ou parado; confira o lag e o broker."
+
+      - alert: CashflowConsumerLagHigh
+        expr: max(cashflow_consumer_lag) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: consolidado
+        annotations:
+          summary: "Lag do consumidor acima de 1000 mensagens"
+          description: "O consolidado pode estar atrás dos lançamentos."
+
+      - alert: CashflowDltEvents
+        expr: increase(cashflow_dlt_events_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: consolidado
+        annotations:
+          summary: "Evento enviado à DLT"
+          description: "Um evento falhou de forma persistente; investigue o motivo antes de reprocessar."
+
+      - alert: CashflowPoolSaturationHigh
+        expr: max(cashflow_db_pool_saturation) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: cashflow
+        annotations:
+          summary: "Pool de conexões acima de 80% de uso"
+          description: "Risco de esgotar o pool; confira a carga e o número de conexões."
+
+      - alert: CashflowServiceDown
+        expr: up{job=~"lancamentos|consolidado"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: cashflow
+        annotations:
+          summary: "Serviço fora do ar ({{ $labels.job }})"
+          description: "O Prometheus não consegue raspar o /metrics do serviço."
