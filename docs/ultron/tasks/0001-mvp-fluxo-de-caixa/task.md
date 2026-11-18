@@ -4,7 +4,7 @@ tipo: feature
 branch: feature/0001-mvp-fluxo-de-caixa
 estado: em andamento
 responsavel: jhenriquecosta@hotmail.com
-next_skill: ultron-slices
+next_skill: ultron-coder
 issue: #1
 
 ## Contexto
@@ -44,3 +44,14 @@ Artefatos de referência: `docs/requisitos/requisitos.md` (PRD-0001), `docs/ultr
 - [ ] [AC11] Quando a requisição não tem token válido, a API responde `401`; sem o escopo exigido, `403`.
 - [ ] [AC12] Quando um comando do README é seguido em uma máquina limpa, o ambiente local sobe e o fluxo ponta a ponta funciona.
 - [ ] [AC13] Quando um retry concorrente com a mesma `Idempotency-Key` chega enquanto o original ainda processa, a API responde `409`.
+
+## Fatias publicadas
+
+| Fatia | Título | Issue | Estado |
+|---|---|---|---|
+| 1 | Lançamentos ponta a ponta | #2 | aberta |
+| 2 | Evento e consolidado do dia | #3 | aberta |
+| 3 | Estorno imutável | #4 | aberta |
+| 4 | Resiliência, observabilidade e carga | #5 | aberta |
+| 5 | Execução local e README | #6 | aberta |
+| 6 | Documentação dos diferenciais | #7 | aberta |
