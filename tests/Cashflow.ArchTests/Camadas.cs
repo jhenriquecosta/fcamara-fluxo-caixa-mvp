@@ -1,13 +1,19 @@
 using System.Reflection;
-using Cashflow.Common;
-using Cashflow.Consolidado.Domain;
-using Cashflow.Lancamentos.Domain;
+using Cashflow.Application;
+using Cashflow.Contracts;
+using Cashflow.CrossCuttingConcerns.DateTimes;
+using Cashflow.Domain.Entities;
+using Cashflow.Infrastructure;
+using Cashflow.Modules.Consolidado.Entities;
+using Cashflow.Modules.Lancamentos.Entities;
 using NetArchTest.Rules;
 
 namespace Cashflow.ArchTests;
 
 /// <summary>
-/// A separação deixa de ser combinada e vira teste: a dependência aponta para dentro.
+/// A separação deixa de ser combinada e vira teste: os compartilhados apontam para dentro
+/// e não conhecem módulo; os módulos podem usar os compartilhados; os hosts são as únicas
+/// composition roots.
 /// </summary>
 public sealed class Camadas
 {
@@ -23,46 +29,45 @@ public sealed class Camadas
     }
 
     [Fact]
-    public void Dominio_de_lancamentos_nao_conhece_as_camadas_externas() =>
+    public void CrossCuttingConcerns_nao_conhece_nada_acima() =>
+        SemDependencia(typeof(IDateTimeProvider).Assembly,
+            "Cashflow.Domain", "Cashflow.Application", "Cashflow.Infrastructure",
+            "Cashflow.Modules", "Cashflow.Lancamentos.Api", "Cashflow.Consolidado.Api");
+
+    [Fact]
+    public void Domain_nao_conhece_aplicacao_infraestrutura_nem_modulos() =>
+        SemDependencia(typeof(Entity<>).Assembly,
+            "Cashflow.Application", "Cashflow.Infrastructure",
+            "Cashflow.Modules", "Cashflow.Lancamentos.Api", "Cashflow.Consolidado.Api");
+
+    [Fact]
+    public void Application_nao_conhece_infraestrutura_nem_modulos() =>
+        SemDependencia(typeof(Dispatcher).Assembly,
+            "Cashflow.Infrastructure",
+            "Cashflow.Modules", "Cashflow.Lancamentos.Api", "Cashflow.Consolidado.Api");
+
+    [Fact]
+    public void Contracts_nao_conhece_dominio_infraestrutura_nem_modulos() =>
+        SemDependencia(typeof(CashflowEvent<>).Assembly,
+            "Cashflow.Domain", "Cashflow.Infrastructure",
+            "Cashflow.Modules", "Cashflow.Lancamentos.Api", "Cashflow.Consolidado.Api");
+
+    [Fact]
+    public void Infrastructure_nao_conhece_modulos_nem_hosts() =>
+        SemDependencia(typeof(CashflowInfrastructure).Assembly,
+            "Cashflow.Modules", "Cashflow.Lancamentos.Api", "Cashflow.Consolidado.Api");
+
+    [Fact]
+    public void Modulo_de_lancamentos_nao_conhece_o_host_nem_o_outro_modulo() =>
         SemDependencia(typeof(Lancamento).Assembly,
-            "Cashflow.Lancamentos.Application",
-            "Cashflow.Lancamentos.Infrastructure",
-            "Cashflow.Lancamentos.Api");
+            "Cashflow.Lancamentos.Api", "Cashflow.Modules.Consolidado", "Cashflow.Consolidado.Api");
 
     [Fact]
-    public void Aplicacao_de_lancamentos_nao_conhece_infraestrutura_nem_api() =>
-        SemDependencia(typeof(Cashflow.Lancamentos.Application.LancamentoCorpo).Assembly,
-            "Cashflow.Lancamentos.Infrastructure",
-            "Cashflow.Lancamentos.Api");
-
-    [Fact]
-    public void Infraestrutura_de_lancamentos_nao_conhece_a_api() =>
-        SemDependencia(typeof(Cashflow.Lancamentos.Infrastructure.Persistence.LancamentoRepository).Assembly,
-            "Cashflow.Lancamentos.Api");
-
-    [Fact]
-    public void Dominio_do_consolidado_nao_conhece_as_camadas_externas() =>
+    public void Modulo_do_consolidado_nao_conhece_o_host_nem_o_outro_modulo() =>
         SemDependencia(typeof(ConsolidadoDiario).Assembly,
-            "Cashflow.Consolidado.Application",
-            "Cashflow.Consolidado.Infrastructure",
-            "Cashflow.Consolidado.Api");
+            "Cashflow.Consolidado.Api", "Cashflow.Modules.Lancamentos", "Cashflow.Lancamentos.Api");
 
     [Fact]
-    public void Aplicacao_do_consolidado_nao_conhece_infraestrutura_nem_api() =>
-        SemDependencia(typeof(Cashflow.Consolidado.Application.ConsultarConsolidadoHandler).Assembly,
-            "Cashflow.Consolidado.Infrastructure",
-            "Cashflow.Consolidado.Api");
-
-    [Fact]
-    public void Lib_comum_nao_conhece_nenhum_servico() =>
-        SemDependencia(typeof(CashflowCommon).Assembly,
-            "Cashflow.Lancamentos",
-            "Cashflow.Consolidado");
-
-    [Fact]
-    public void Contratos_nao_conhecem_nenhum_servico() =>
-        SemDependencia(typeof(Cashflow.Contracts.CashflowEvent<>).Assembly,
-            "Cashflow.Lancamentos",
-            "Cashflow.Consolidado",
-            "Cashflow.Common");
+    public void Os_dois_modulos_convivem_em_assemblies_distintos() =>
+        Assert.NotEqual(typeof(Lancamento).Assembly, typeof(ConsolidadoDiario).Assembly);
 }

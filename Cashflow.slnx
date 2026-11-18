@@ -1,18 +1,24 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/Cashflow.Common/Cashflow.Common.csproj" />
-    <Project Path="src/Cashflow.Consolidado.Application/Cashflow.Consolidado.Application.csproj" />
-    <Project Path="src/Cashflow.Consolidado.Domain/Cashflow.Consolidado.Domain.csproj" />
-    <Project Path="src/Cashflow.Consolidado.Infrastructure/Cashflow.Consolidado.Infrastructure.csproj" />
+    <Project Path="src/Cashflow.Application/Cashflow.Application.csproj" />
+    <Project Path="src/Cashflow.BackgroundServer/Cashflow.BackgroundServer.csproj" />
     <Project Path="src/Cashflow.Contracts/Cashflow.Contracts.csproj" />
-    <Project Path="src/Cashflow.Lancamentos.Application/Cashflow.Lancamentos.Application.csproj" />
-    <Project Path="src/Cashflow.Lancamentos.Domain/Cashflow.Lancamentos.Domain.csproj" />
-    <Project Path="src/Cashflow.Lancamentos.Infrastructure/Cashflow.Lancamentos.Infrastructure.csproj" />
+    <Project Path="src/Cashflow.CrossCuttingConcerns/Cashflow.CrossCuttingConcerns.csproj" />
+    <Project Path="src/Cashflow.Domain/Cashflow.Domain.csproj" />
+    <Project Path="src/Cashflow.Infrastructure/Cashflow.Infrastructure.csproj" />
+    <Project Path="src/Cashflow.Migrator/Cashflow.Migrator.csproj" />
+    <Project Path="src/Cashflow.Modules.Consolidado/Cashflow.Modules.Consolidado.csproj" />
+    <Project Path="src/Cashflow.Modules.Lancamentos/Cashflow.Modules.Lancamentos.csproj" />
     <Project Path="src/Consolidado.Api/Consolidado.Api.csproj" />
     <Project Path="src/Lancamentos.Api/Lancamentos.Api.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Cashflow.ArchTests/Cashflow.ArchTests.csproj" />
+    <Project Path="tests/Cashflow.EndToEndTests/Cashflow.EndToEndTests.csproj" />
+    <Project Path="tests/Cashflow.Modules.Consolidado.IntegrationTests/Cashflow.Modules.Consolidado.IntegrationTests.csproj" />
+    <Project Path="tests/Cashflow.Modules.Consolidado.UnitTests/Cashflow.Modules.Consolidado.UnitTests.csproj" />
+    <Project Path="tests/Cashflow.Modules.Lancamentos.IntegrationTests/Cashflow.Modules.Lancamentos.IntegrationTests.csproj" />
+    <Project Path="tests/Cashflow.Modules.Lancamentos.UnitTests/Cashflow.Modules.Lancamentos.UnitTests.csproj" />
     <Project Path="tests/Lancamentos.Api.Tests/Lancamentos.Api.Tests.csproj" />
   </Folder>
 </Solution>

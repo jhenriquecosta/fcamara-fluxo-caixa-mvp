@@ -8,9 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Cashflow.Common\Cashflow.Common.csproj" />
-    <ProjectReference Include="..\Cashflow.Lancamentos.Application\Cashflow.Lancamentos.Application.csproj" />
-    <ProjectReference Include="..\Cashflow.Lancamentos.Infrastructure\Cashflow.Lancamentos.Infrastructure.csproj" />
+    <ProjectReference Include="..\Cashflow.Infrastructure\Cashflow.Infrastructure.csproj" />
+    <ProjectReference Include="..\Cashflow.Modules.Lancamentos\Cashflow.Modules.Lancamentos.csproj" />
   </ItemGroup>
 
 </Project>

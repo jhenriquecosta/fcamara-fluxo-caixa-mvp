@@ -21,14 +21,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Cashflow.Common\Cashflow.Common.csproj" />
+    <ProjectReference Include="..\..\src\Cashflow.CrossCuttingConcerns\Cashflow.CrossCuttingConcerns.csproj" />
+    <ProjectReference Include="..\..\src\Cashflow.Domain\Cashflow.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Cashflow.Application\Cashflow.Application.csproj" />
     <ProjectReference Include="..\..\src\Cashflow.Contracts\Cashflow.Contracts.csproj" />
-    <ProjectReference Include="..\..\src\Cashflow.Lancamentos.Domain\Cashflow.Lancamentos.Domain.csproj" />
-    <ProjectReference Include="..\..\src\Cashflow.Lancamentos.Application\Cashflow.Lancamentos.Application.csproj" />
-    <ProjectReference Include="..\..\src\Cashflow.Lancamentos.Infrastructure\Cashflow.Lancamentos.Infrastructure.csproj" />
-    <ProjectReference Include="..\..\src\Cashflow.Consolidado.Domain\Cashflow.Consolidado.Domain.csproj" />
-    <ProjectReference Include="..\..\src\Cashflow.Consolidado.Application\Cashflow.Consolidado.Application.csproj" />
-    <ProjectReference Include="..\..\src\Cashflow.Consolidado.Infrastructure\Cashflow.Consolidado.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Cashflow.Infrastructure\Cashflow.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Cashflow.Modules.Lancamentos\Cashflow.Modules.Lancamentos.csproj" />
+    <ProjectReference Include="..\..\src\Cashflow.Modules.Consolidado\Cashflow.Modules.Consolidado.csproj" />
     <ProjectReference Include="..\..\src\Lancamentos.Api\Lancamentos.Api.csproj" />
     <ProjectReference Include="..\..\src\Consolidado.Api\Consolidado.Api.csproj" />
   </ItemGroup>

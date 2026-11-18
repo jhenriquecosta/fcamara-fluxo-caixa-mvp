@@ -2,8 +2,8 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Cashflow.Lancamentos.Application;
-using Cashflow.Lancamentos.Domain;
+using Cashflow.Modules.Lancamentos.Commands;
+using Cashflow.Modules.Lancamentos.Entities;
 using Dapper;
 using Npgsql;
 

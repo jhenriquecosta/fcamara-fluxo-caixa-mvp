@@ -1,20 +1,18 @@
-using Cashflow.Common;
-using Cashflow.Common.Web;
-using Cashflow.Lancamentos.Api.Endpoints;
-using Cashflow.Lancamentos.Application;
-using Cashflow.Lancamentos.Infrastructure;
-using Cashflow.Lancamentos.Infrastructure.Observability;
-using Npgsql;
+using Cashflow.Application;
+using Cashflow.Infrastructure;
+using Cashflow.Infrastructure.Web;
+using Cashflow.Modules.Lancamentos;
+using Cashflow.Modules.Lancamentos.Endpoints;
+using Cashflow.Modules.Lancamentos.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.AddCashflowCommon("lancamentos", LancamentosMetrics.MeterName);
-builder.Services.AddLancamentosApplication();
-builder.Services.AddLancamentosInfrastructure(builder.Configuration);
+builder.AddCashflowInfrastructure("lancamentos", LancamentosMetrics.MeterName);
+builder.Services.AddCashflowApplication();
+builder.Services.AddLancamentosModule(opt =>
+    builder.Configuration.GetSection("Modules:Lancamentos").Bind(opt));
 
 var app = builder.Build();
-
-await app.Services.GetRequiredService<NpgsqlDataSource>().ApplyLancamentosSchemaAsync();
 
 app.UseCashflowWeb();
 app.MapCashflowEndpoints();

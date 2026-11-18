@@ -1,20 +1,18 @@
-using Cashflow.Common;
-using Cashflow.Common.Web;
-using Cashflow.Consolidado.Api.Endpoints;
-using Cashflow.Consolidado.Application;
-using Cashflow.Consolidado.Infrastructure;
-using Cashflow.Consolidado.Infrastructure.Observability;
-using Npgsql;
+using Cashflow.Application;
+using Cashflow.Infrastructure;
+using Cashflow.Infrastructure.Web;
+using Cashflow.Modules.Consolidado;
+using Cashflow.Modules.Consolidado.Endpoints;
+using Cashflow.Modules.Consolidado.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.AddCashflowCommon("consolidado", ConsolidadoMetrics.MeterName);
-builder.Services.AddConsolidadoApplication();
-builder.Services.AddConsolidadoInfrastructure(builder.Configuration);
+builder.AddCashflowInfrastructure("consolidado", ConsolidadoMetrics.MeterName);
+builder.Services.AddCashflowApplication();
+builder.Services.AddConsolidadoModule(opt =>
+    builder.Configuration.GetSection("Modules:Consolidado").Bind(opt));
 
 var app = builder.Build();
-
-await app.Services.GetRequiredService<NpgsqlDataSource>().ApplyConsolidadoSchemaAsync();
 
 app.UseCashflowWeb();
 app.MapCashflowEndpoints();

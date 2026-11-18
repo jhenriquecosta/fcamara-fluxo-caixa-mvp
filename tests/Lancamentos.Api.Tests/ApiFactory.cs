@@ -30,7 +30,7 @@ public sealed class ApiFactory : WebApplicationFactory<LancamentosApiEntryPoint>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        Environment.SetEnvironmentVariable("ConnectionStrings__Postgres", _connectionString);
+        Environment.SetEnvironmentVariable("Modules__Lancamentos__ConnectionStrings__Default", _connectionString);
         Environment.SetEnvironmentVariable("Kafka__BootstrapServers", _kafkaBootstrap ?? "");
         builder.UseEnvironment("Testing");
 

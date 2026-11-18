@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Cashflow.Modules.Consolidado</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Cashflow.Application\Cashflow.Application.csproj" />
+    <ProjectReference Include="..\Cashflow.Contracts\Cashflow.Contracts.csproj" />
+    <ProjectReference Include="..\Cashflow.CrossCuttingConcerns\Cashflow.CrossCuttingConcerns.csproj" />
+    <ProjectReference Include="..\Cashflow.Domain\Cashflow.Domain.csproj" />
+    <ProjectReference Include="..\Cashflow.Infrastructure\Cashflow.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Npgsql" Version="10.0.3" />
+    <PackageReference Include="Dapper" Version="2.1.89" />
+    <PackageReference Include="Confluent.Kafka" Version="2.16.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Repositories/Schema.sql" />
+  </ItemGroup>
+
+</Project>

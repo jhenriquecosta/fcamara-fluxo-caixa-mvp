@@ -17,7 +17,7 @@ public sealed class ConsolidadoFactory(string connectionString, string kafkaBoot
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        Environment.SetEnvironmentVariable("ConnectionStrings__Postgres", connectionString);
+        Environment.SetEnvironmentVariable("Modules__Consolidado__ConnectionStrings__Default", connectionString);
         Environment.SetEnvironmentVariable("Kafka__BootstrapServers", kafkaBootstrap);
         builder.UseEnvironment("Testing");
     }
