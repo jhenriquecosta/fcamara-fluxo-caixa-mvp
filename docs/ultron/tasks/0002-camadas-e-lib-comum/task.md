@@ -22,7 +22,7 @@ O Operador avaliou a estrutura e pediu separar as responsabilidades e criar uma 
 
 ## Critérios de aceitação
 
-- [ ] A suíte permanece verde (17/17 ou a reorganizada), incluindo o ArchTest das dependências.
-- [ ] O `docker compose up` sobe e o demo do README passa.
-- [ ] A `Domain` não referencia a `Infrastructure`; a `Api` é a única composition root; a lib comum não depende de serviço.
-- [ ] Nenhum comportamento observável muda: as respostas, os status, o evento e o consolidado continuam iguais.
+- [x] A suíte permanece verde (17/17 ou a reorganizada), incluindo o ArchTest das dependências.
+- [x] O `docker compose up` sobe e o demo do README passa.
+- [x] A `Domain` não referencia a `Infrastructure`; a `Api` é a única composition root; a lib comum não depende de serviço.
+- [x] Nenhum comportamento observável muda: as respostas, os status, o evento e o consolidado continuam iguais.

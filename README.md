@@ -13,7 +13,7 @@ Um comerciante precisa controlar o fluxo de caixa diário e consultar o saldo co
 - O estorno é um **novo lançamento** de tipo oposto; o original nunca é editado.
 - O desenho-base está em [`docs/requisitos/Arquietura-solucao-v2.png`](docs/requisitos/Arquietura-solucao-v2.png); o texto com os diagramas C4 e o mapeamento local ↔ AWS está em [`docs/arquitetura/arquitetura-alvo.md`](docs/arquitetura/arquitetura-alvo.md).
 
-Decisões registradas em [ADRs](docs/ultron/agents/adr/): estilo event-driven com outbox (0001), Kafka em KRaft (0002), PostgreSQL com bancos lógicos (0003), idempotência e estorno (0004), projeção e dia do registro (0005), stack .NET 10 (0006). Os requisitos estão no [PRD](docs/requisitos/requisitos.md).
+Decisões registradas em [ADRs](docs/ultron/agents/adr/): estilo event-driven com outbox (0001), Kafka em KRaft (0002), PostgreSQL com bancos lógicos (0003), idempotência e estorno (0004), projeção e dia do registro (0005), stack .NET 10 (0006) e estrutura em camadas com lib comum (0007). Os requisitos estão no [PRD](docs/requisitos/requisitos.md).
 
 ## Como rodar localmente
 
@@ -26,8 +26,6 @@ observability/scripts/apply-elk.sh   # template de índice, ILM e data view do K
 
 > Se a stack já existia de uma execução anterior, rode `docker compose down -v` antes: o init do PostgreSQL cria os usuários por serviço só na primeira subida do volume.
 
-```bash
-```
 
 | Serviço | URL |
 |---|---|
@@ -80,7 +78,7 @@ No Kibana, a data view `cashflow-logs-*` mostra os logs JSON dos dois serviços.
 dotnet test --solution Cashflow.slnx
 ```
 
-A suíte (17 testes) sobe PostgreSQL e Kafka reais via Testcontainers e cobre: idempotência (replay, 422 de payload, 409 de concorrência), estorno (regras e imutabilidade), o fluxo ponta a ponta até o consolidado, a entrega duplicada somando uma vez, a DLT após 1+3 tentativas, o isolamento (lançamentos de pé com o consolidado fora) e a carga de 50 req/s com ≥95% de sucesso.
+A suíte (24 testes — 17 de comportamento e 7 de arquitetura) sobe PostgreSQL e Kafka reais via Testcontainers e cobre: idempotência (replay, 422 de payload, 409 de concorrência), estorno (regras e imutabilidade), o fluxo ponta a ponta até o consolidado, a entrega duplicada somando uma vez, a DLT após 1+3 tentativas, o isolamento (lançamentos de pé com o consolidado fora) a carga de 50 req/s com ≥95% de sucesso e, nos ArchTests, a direção das dependências entre as camadas.
 
 ## Observabilidade
 
@@ -97,14 +95,23 @@ A convenção de logs e as métricas estão em [`docs/ultron/agents/logging.md`]
 ## Estrutura
 
 ```
-src/Lancamentos.Api      API, idempotência, outbox, estorno
-src/Consolidado.Api      consumidor, projeção, consulta
-tests/Lancamentos.Api.Tests  testes de integração (PostgreSQL + Kafka)
-observability/           ELK, Prometheus, Grafana, SLOs
-infra/postgres/          criação do banco lógico do consolidado
-docs/requisitos/         PRD e desenho-base
-docs/ultron/agents/      visão, negócio, ADRs, logging, research
-compose.yaml             PostgreSQL, Kafka, serviços, ELK, Prometheus, Grafana
+src/Cashflow.Common/                      lib comum: auth, Serilog, OpenTelemetry, request context, tempo
+src/Cashflow.Contracts/                   envelope do evento, tipos e tópicos (schema do barramento)
+src/Cashflow.Lancamentos.Domain/          regras do lançamento e do estorno, dia do negócio, portas
+src/Cashflow.Lancamentos.Application/     casos de uso e orquestração da idempotência
+src/Cashflow.Lancamentos.Infrastructure/  Dapper, outbox, publicador Kafka, métricas, migrator
+src/Lancamentos.Api/                      composição e endpoints do serviço de Lançamentos
+src/Cashflow.Consolidado.Domain/          projeção (saldo do dia e acumulado), regra do delta
+src/Cashflow.Consolidado.Application/     consulta e aplicação do evento
+src/Cashflow.Consolidado.Infrastructure/  Dapper, consumidor Kafka, métricas, migrator
+src/Consolidado.Api/                      composição e endpoints do serviço de Consolidado
+tests/Lancamentos.Api.Tests/              integração de comportamento (PostgreSQL + Kafka)
+tests/Cashflow.ArchTests/                 direção das dependências (NetArchTest)
+observability/                            ELK, Prometheus, Grafana, SLOs
+infra/postgres/                           criação do banco lógico do consolidado
+docs/requisitos/                          PRD e desenho-base
+docs/ultron/agents/                       visão, negócio, ADRs, logging, research
+compose.yaml                              PostgreSQL, Kafka, serviços, ELK, Prometheus, Grafana
 ```
 
 ## Fora de escopo

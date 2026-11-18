@@ -1,8 +1,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
-COPY src/Consolidado.Api/Consolidado.Api.csproj src/Consolidado.Api/
+COPY src/ src/
 RUN dotnet restore src/Consolidado.Api/Consolidado.Api.csproj
-COPY src/Consolidado.Api/ src/Consolidado.Api/
 RUN dotnet publish src/Consolidado.Api/Consolidado.Api.csproj -c Release -o /app --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
