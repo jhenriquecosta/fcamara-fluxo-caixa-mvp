@@ -1,0 +1,1 @@
+{"ts": "2026-11-18T20:58:05.957Z", "skill": "ultron-flow", "action": "gate", "summary": "verify vermelho bloqueou o fechamento de 0001-mvp-fluxo-de-caixa", "task": "0001-mvp-fluxo-de-caixa", "issue": "2", "branch": "feature/0001-mvp-fluxo-de-caixa", "outcome": "blocked", "gate": "verify"}
