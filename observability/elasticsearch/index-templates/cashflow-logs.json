@@ -1,0 +1,41 @@
+{
+  "index_patterns": ["cashflow-logs-*"],
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 0,
+      "index.lifecycle.name": "cashflow-logs-7d"
+    },
+    "mappings": {
+      "properties": {
+        "@timestamp":      { "type": "date" },
+        "ts":              { "type": "date" },
+        "level":           { "type": "keyword" },
+        "log.level":       { "type": "keyword" },
+        "context":         { "type": "keyword" },
+        "service":         { "type": "keyword" },
+        "service.name":    { "type": "keyword" },
+        "env":             { "type": "keyword" },
+        "msg":             { "type": "text" },
+        "message":         { "type": "text" },
+        "correlation_id":  { "type": "keyword" },
+        "trace_id":        { "type": "keyword" },
+        "trace.id":        { "type": "keyword" },
+        "span_id":         { "type": "keyword" },
+        "span.id":         { "type": "keyword" },
+        "request_id":      { "type": "keyword" },
+        "comerciante_hash":{ "type": "keyword" },
+        "lancamento_id":   { "type": "keyword" },
+        "event_id":        { "type": "keyword" },
+        "estorno_de":      { "type": "keyword" },
+        "tipo":            { "type": "keyword" },
+        "valor":           { "type": "double" },
+        "status":          { "type": "integer" },
+        "duration_ms":     { "type": "double" },
+        "dlt":             { "type": "boolean" },
+        "error.message":   { "type": "text" },
+        "error.type":      { "type": "keyword" }
+      }
+    }
+  }
+}

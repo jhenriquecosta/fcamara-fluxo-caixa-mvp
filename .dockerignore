@@ -1,0 +1,10 @@
+**/bin
+**/obj
+.git
+.claude
+.tmp
+logs
+tests
+observability
+docs
+README.md
