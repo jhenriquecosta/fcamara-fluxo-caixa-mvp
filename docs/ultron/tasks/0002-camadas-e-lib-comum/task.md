@@ -2,9 +2,10 @@
 
 tipo: refactor
 branch: refactor/0002-camadas-e-lib-comum
-estado: em andamento
+publicacao: pendente
+estado: concluído
 responsavel: jhenriquecosta@hotmail.com
-next_skill: ultron-coder
+next_skill: 
 issue: #10
 
 ## Contexto
