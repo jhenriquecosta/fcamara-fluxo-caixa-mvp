@@ -3,9 +3,10 @@
 tipo: feature
 branch: feature/0001-mvp-fluxo-de-caixa
 slices_fechados: #2, #3, #4, #5, #7, #6
-estado: em andamento
+publicacao: pendente
+estado: concluído
 responsavel: jhenriquecosta@hotmail.com
-next_skill: ultron-review
+next_skill: 
 issue: #1
 
 ## Contexto
