@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS lancamento (
 CREATE INDEX IF NOT EXISTS ix_lancamento_comerciante_data
     ON lancamento (comerciante_id, data);
 
+CREATE UNIQUE INDEX IF NOT EXISTS ux_lancamento_estorno_de
+    ON lancamento (estorno_de) WHERE estorno_de IS NOT NULL;
+
 CREATE TABLE IF NOT EXISTS idempotencia (
     comerciante_id     uuid NOT NULL,
     chave              text NOT NULL,

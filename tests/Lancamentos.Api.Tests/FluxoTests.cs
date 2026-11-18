@@ -112,4 +112,36 @@ public sealed class FluxoTests(PostgresFixture db, KafkaFixture kafka)
             $"/api/v1/consolidado/{Dia}", TestContext.Current.CancellationToken);
         Assert.Equal(70.00m, depois.GetProperty("saldoDia").GetDecimal());
     }
+
+    [Fact]
+    public async Task AC4_estorno_chega_ao_consolidado()
+    {
+        var comerciante = Guid.NewGuid();
+        using var lancamentos = new ApiFactory(db.ConnectionString, FixedNow, kafka.BootstrapServers);
+        using var consolidado = new ConsolidadoFactory(db.ConnectionString, kafka.BootstrapServers);
+        using var clienteL = Autenticado(lancamentos.CreateClient(), comerciante,
+            "lancamentos.write", Guid.NewGuid().ToString());
+        using var clienteC = Autenticado(consolidado.CreateClient(), comerciante, "consolidado.read");
+
+        var originalResp = await clienteL.PostAsJsonAsync("/api/v1/lancamentos",
+            new { valor = 50.00m, tipo = "credito" }, TestContext.Current.CancellationToken);
+        var original = await originalResp.Content.ReadFromJsonAsync<JsonElement>(
+            TestContext.Current.CancellationToken);
+        var originalId = original.GetProperty("id").GetGuid();
+
+        var aposLancamento = await EsperarConsolidadoAsync(clienteC,
+            j => j.GetProperty("saldoDia").GetDecimal() == 50.00m, TimeSpan.FromSeconds(40));
+        Assert.NotNull(aposLancamento);
+
+        using var clienteEstorno = Autenticado(lancamentos.CreateClient(), comerciante,
+            "lancamentos.write", Guid.NewGuid().ToString());
+        var estornoResp = await clienteEstorno.PostAsync(
+            $"/api/v1/lancamentos/{originalId}/estornos", null, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Created, estornoResp.StatusCode);
+
+        var aposEstorno = await EsperarConsolidadoAsync(clienteC,
+            j => j.GetProperty("saldoDia").GetDecimal() == 0m, TimeSpan.FromSeconds(40));
+        Assert.NotNull(aposEstorno);
+        Assert.Equal(0m, aposEstorno!.Value.GetProperty("saldoAcumulado").GetDecimal());
+    }
 }

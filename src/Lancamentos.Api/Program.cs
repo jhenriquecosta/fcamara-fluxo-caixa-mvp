@@ -164,6 +164,42 @@ app.MapPost("/api/v1/lancamentos", async (
     };
 }).RequireAuthorization("lancamentos.write");
 
+app.MapPost("/api/v1/lancamentos/{id:guid}/estornos", async (
+    Guid id,
+    HttpRequest request,
+    ClaimsPrincipal user,
+    LancamentoService service,
+    CancellationToken ct) =>
+{
+    var chave = request.Headers["Idempotency-Key"].FirstOrDefault();
+    if (string.IsNullOrWhiteSpace(chave))
+        return Results.Problem(statusCode: 400, title: "Idempotency-Key é obrigatório");
+
+    if (!Guid.TryParse(user.FindFirst("comercianteId")?.Value, out var comercianteId))
+        return Results.Problem(statusCode: 403, title: "token sem comercianteId");
+
+    var resultado = await service.EstornarAsync(
+        new RegistrarEstorno(comercianteId, id, chave), ct);
+
+    return resultado switch
+    {
+        RegistroResultado.Criado criado => Results.Json(criado.Resposta, statusCode: 201),
+        RegistroResultado.Idempotente idempotente =>
+            Results.Content(idempotente.RespostaJson, "application/json", statusCode: 201),
+        RegistroResultado.PayloadDivergente =>
+            Results.Problem(statusCode: 422, title: "mesma idempotency key com outro lançamento"),
+        RegistroResultado.EmProcessamento =>
+            Results.Problem(statusCode: 409, title: "requisição em processamento para esta idempotency key"),
+        RegistroResultado.NaoEncontrado =>
+            Results.Problem(statusCode: 404, title: "lançamento não encontrado para este comerciante"),
+        RegistroResultado.RegraInvalida =>
+            Results.Problem(statusCode: 422, title: "um estorno não pode ser estornado"),
+        RegistroResultado.Conflito =>
+            Results.Problem(statusCode: 409, title: "lançamento já estornado"),
+        _ => Results.Problem(statusCode: 500)
+    };
+}).RequireAuthorization("lancamentos.write");
+
 if (app.Environment.IsDevelopment())
 {
     app.MapPost("/dev/token", (DevTokenRequest request, IConfiguration configuration) =>

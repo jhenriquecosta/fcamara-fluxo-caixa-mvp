@@ -35,8 +35,8 @@ Artefatos de referência: `docs/requisitos/requisitos.md` (PRD-0001), `docs/ultr
 - [x] [AC1] Quando um lançamento válido é enviado com `Idempotency-Key`, a API responde `201` e o movimento aparece no consolidado do dia.
 - [x] [AC2] Quando a mesma `Idempotency-Key` e o mesmo corpo são reenviados, a API devolve a resposta original e não cria um segundo lançamento.
 - [x] [AC3] Quando a mesma `Idempotency-Key` é usada com corpo diferente, a API responde `422`.
-- [ ] [AC4] Quando um lançamento existente é estornado, um novo lançamento de tipo oposto é criado e o original permanece inalterado.
-- [ ] [AC5] Quando um segundo estorno do mesmo original é pedido, a API responde `409`; estornar um estorno responde `422`.
+- [x] [AC4] Quando um lançamento existente é estornado, um novo lançamento de tipo oposto é criado e o original permanece inalterado.
+- [x] [AC5] Quando um segundo estorno do mesmo original é pedido, a API responde `409`; estornar um estorno responde `422`.
 - [x] [AC6] Quando o evento de um lançamento é entregue duas vezes, o consolidado soma o valor uma única vez.
 - [ ] [AC7] Quando o consumo falha de forma persistente, o evento passa pelas tentativas e chega à DLT.
 - [ ] [AC8] Quando o serviço de consolidado é parado, o serviço de lançamentos continua aceitando lançamentos válidos.
@@ -52,7 +52,7 @@ Artefatos de referência: `docs/requisitos/requisitos.md` (PRD-0001), `docs/ultr
 |---|---|---|---|
 | 1 | Lançamentos ponta a ponta | #2 | fechada (local) |
 | 2 | Evento e consolidado do dia | #3 | fechada (local) |
-| 3 | Estorno imutável | #4 | aberta |
+| 3 | Estorno imutável | #4 | fechada (local) |
 | 4 | Resiliência, observabilidade e carga | #5 | aberta |
 | 5 | Execução local e README | #6 | aberta |
 | 6 | Documentação dos diferenciais | #7 | aberta |

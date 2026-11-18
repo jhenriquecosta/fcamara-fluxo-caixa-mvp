@@ -144,6 +144,77 @@ public sealed class LancamentoTests(PostgresFixture db)
     }
 
     [Fact]
+    public async Task AC4_estorno_cria_contra_lancamento_e_preserva_o_original()
+    {
+        var comerciante = Guid.NewGuid();
+        using var factory = new ApiFactory(db.ConnectionString, FixedNow);
+        using var client = ClientComEscopo(factory, comerciante, Guid.NewGuid().ToString());
+
+        var originalResp = await client.PostAsJsonAsync("/api/v1/lancamentos",
+            new { valor = 100.00m, tipo = "credito" }, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Created, originalResp.StatusCode);
+        var original = await originalResp.Content.ReadFromJsonAsync<JsonElement>(
+            TestContext.Current.CancellationToken);
+        var originalId = original.GetProperty("id").GetGuid();
+
+        using var estornoClient = ClientComEscopo(factory, comerciante, Guid.NewGuid().ToString());
+        var estornoResp = await estornoClient.PostAsync(
+            $"/api/v1/lancamentos/{originalId}/estornos", null, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Created, estornoResp.StatusCode);
+        var estorno = await estornoResp.Content.ReadFromJsonAsync<JsonElement>(
+            TestContext.Current.CancellationToken);
+        Assert.Equal("debito", estorno.GetProperty("tipo").GetString());
+        Assert.Equal(100.00m, estorno.GetProperty("valor").GetDecimal());
+        Assert.Equal(originalId, estorno.GetProperty("estornoDe").GetGuid());
+
+        await using var conn = new NpgsqlConnection(db.ConnectionString);
+        var originalDb = await conn.QuerySingleAsync<LancamentoRow>(
+            "SELECT tipo AS Tipo, valor AS Valor, estorno_de AS EstornoDe FROM lancamento WHERE id = @id",
+            new { id = originalId });
+        var estornoDb = await conn.QuerySingleAsync<LancamentoRow>(
+            "SELECT tipo AS Tipo, valor AS Valor, estorno_de AS EstornoDe FROM lancamento WHERE estorno_de = @id",
+            new { id = originalId });
+
+        Assert.Equal("credito", originalDb.Tipo);
+        Assert.Equal(100.00m, originalDb.Valor);
+        Assert.Null(originalDb.EstornoDe);
+        Assert.Equal("debito", estornoDb.Tipo);
+        Assert.Equal(originalId, estornoDb.EstornoDe);
+    }
+
+    [Fact]
+    public async Task AC5_segundo_estorno_409_e_estorno_de_estorno_422()
+    {
+        var comerciante = Guid.NewGuid();
+        using var factory = new ApiFactory(db.ConnectionString, FixedNow);
+        using var client = ClientComEscopo(factory, comerciante, Guid.NewGuid().ToString());
+
+        var originalResp = await client.PostAsJsonAsync("/api/v1/lancamentos",
+            new { valor = 40.00m, tipo = "debito" }, TestContext.Current.CancellationToken);
+        var original = await originalResp.Content.ReadFromJsonAsync<JsonElement>(
+            TestContext.Current.CancellationToken);
+        var originalId = original.GetProperty("id").GetGuid();
+
+        using var estornoClient = ClientComEscopo(factory, comerciante, Guid.NewGuid().ToString());
+        var primeiro = await estornoClient.PostAsync(
+            $"/api/v1/lancamentos/{originalId}/estornos", null, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Created, primeiro.StatusCode);
+        var primeiroJson = await primeiro.Content.ReadFromJsonAsync<JsonElement>(
+            TestContext.Current.CancellationToken);
+        var estornoId = primeiroJson.GetProperty("id").GetGuid();
+
+        using var segundoClient = ClientComEscopo(factory, comerciante, Guid.NewGuid().ToString());
+        var segundo = await segundoClient.PostAsync(
+            $"/api/v1/lancamentos/{originalId}/estornos", null, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.Conflict, segundo.StatusCode);
+
+        using var terceiroClient = ClientComEscopo(factory, comerciante, Guid.NewGuid().ToString());
+        var estornoDeEstorno = await terceiroClient.PostAsync(
+            $"/api/v1/lancamentos/{estornoId}/estornos", null, TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, estornoDeEstorno.StatusCode);
+    }
+
+    [Fact]
     public async Task Metricas_expoem_o_contador_de_lancamentos()
     {
         using var factory = new ApiFactory(db.ConnectionString, FixedNow);
@@ -159,3 +230,5 @@ public sealed class LancamentoTests(PostgresFixture db)
         Assert.Contains("cashflow_lancamentos_total", texto);
     }
 }
+
+internal sealed record LancamentoRow(string Tipo, decimal Valor, Guid? EstornoDe);

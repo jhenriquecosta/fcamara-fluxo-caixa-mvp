@@ -21,4 +21,5 @@ public sealed class LancamentosMetrics
     public void Idempotente() => _total.Add(1, new KeyValuePair<string, object?>("resultado", "idempotente"));
     public void ConflitoPayload() => _total.Add(1, new KeyValuePair<string, object?>("resultado", "conflito_payload"));
     public void ConflitoConcorrente() => _total.Add(1, new KeyValuePair<string, object?>("resultado", "conflito_concorrente"));
+    public void Estornado() => _total.Add(1, new KeyValuePair<string, object?>("resultado", "estornado"));
 }
