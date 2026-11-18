@@ -1,4 +1,6 @@
 using System.Text.Json;
+using Cashflow.Common.Security;
+using Cashflow.Contracts;
 using Cashflow.Lancamentos.Domain;
 using Cashflow.Lancamentos.Domain.Ports;
 using Microsoft.Extensions.Logging;
@@ -12,13 +14,11 @@ public sealed class RegistrarLancamentoHandler(
     TimeZoneInfo fuso,
     ILogger<RegistrarLancamentoHandler> logger)
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     public async Task<RegistroResultado> HandleAsync(RegistrarLancamentoCommand comando, CancellationToken ct)
     {
         var hash = LancamentoCorpo.Hash(comando.Tipo, comando.Valor, comando.Descricao);
-        var comercianteHash = LancamentoCorpo.HashComerciante(comando.ComercianteId);
-        var chaveHash = LancamentoCorpo.HashChave(comando.IdempotencyKey);
+        var comercianteHash = Hashes.Comerciante(comando.ComercianteId);
+        var chaveHash = Hashes.Chave(comando.IdempotencyKey);
 
         var claim = await idempotencia.ReivindicarAsync(
             comando.ComercianteId, comando.IdempotencyKey, hash, ct);
@@ -46,7 +46,7 @@ public sealed class RegistrarLancamentoHandler(
         var resposta = new LancamentoResponse(
             lancamento.Id, lancamento.ComercianteId, lancamento.Data,
             lancamento.Valor, lancamento.Tipo.Texto(), lancamento.Descricao, null);
-        var respostaJson = JsonSerializer.Serialize(resposta, JsonOptions);
+        var respostaJson = JsonSerializer.Serialize(resposta, CashflowJson.Options);
 
         try
         {

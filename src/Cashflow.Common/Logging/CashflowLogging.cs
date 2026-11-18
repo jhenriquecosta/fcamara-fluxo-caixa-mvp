@@ -14,7 +14,12 @@ public static class CashflowLogging
                 .Enrich.FromLogContext()
                 .Enrich.WithProperty("service", serviceName)
                 .Enrich.WithProperty("env", context.HostingEnvironment.EnvironmentName)
-                .WriteTo.Console(new CompactJsonFormatter());
+                .WriteTo.Console(new CompactJsonFormatter())
+                .WriteTo.File(new CompactJsonFormatter(), $"logs/{serviceName}-.log",
+                    rollingInterval: RollingInterval.Day,
+                    retainedFileCountLimit: 14,
+                    fileSizeLimitBytes: 104857600,
+                    rollOnFileSizeLimit: true);
 
             var elasticsearchUrl = context.Configuration["Serilog:ElasticsearchUrl"];
             if (!string.IsNullOrWhiteSpace(elasticsearchUrl))

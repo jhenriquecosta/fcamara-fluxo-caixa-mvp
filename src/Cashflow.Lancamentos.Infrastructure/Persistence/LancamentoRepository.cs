@@ -10,8 +10,6 @@ namespace Cashflow.Lancamentos.Infrastructure.Persistence;
 
 public sealed class LancamentoRepository(NpgsqlDataSource dataSource) : IRegistroDeLancamentos
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     private sealed record OriginalRow(
         string Tipo, decimal Valor, string? Descricao, DateOnly Data, DateTime CriadoEm, Guid? EstornoDe);
 
@@ -19,11 +17,11 @@ public sealed class LancamentoRepository(NpgsqlDataSource dataSource) : IRegistr
         Lancamento lancamento, string respostaJson, string chaveIdempotencia, CancellationToken ct)
     {
         var eventId = Guid.NewGuid();
-        var evento = JsonSerializer.Serialize(new CashflowEvent<LancamentoEventPayload>(
+        var evento = CashflowEventSerializer.Serialize(new CashflowEvent<LancamentoEventPayload>(
             eventId, EventTypes.LancamentoRegistrado, lancamento.CriadoEm, 1,
             new LancamentoEventPayload(
                 lancamento.Id, lancamento.ComercianteId, lancamento.Tipo.Texto(),
-                lancamento.Valor, lancamento.Data, null)), JsonOptions);
+                lancamento.Valor, lancamento.Data, null)));
 
         await using var conn = await dataSource.OpenConnectionAsync(ct);
         await using var tx = await conn.BeginTransactionAsync(ct);
@@ -87,14 +85,14 @@ public sealed class LancamentoRepository(NpgsqlDataSource dataSource) : IRegistr
         var resposta = new LancamentoResponse(
             estorno.Id, estorno.ComercianteId, estorno.Data, estorno.Valor,
             estorno.Tipo.Texto(), null, estorno.EstornoDe);
-        var respostaJson = JsonSerializer.Serialize(resposta, JsonOptions);
+        var respostaJson = JsonSerializer.Serialize(resposta, CashflowJson.Options);
 
         var eventId = Guid.NewGuid();
-        var evento = JsonSerializer.Serialize(new CashflowEvent<LancamentoEventPayload>(
+        var evento = CashflowEventSerializer.Serialize(new CashflowEvent<LancamentoEventPayload>(
             eventId, EventTypes.LancamentoEstornado, agora, 1,
             new LancamentoEventPayload(
                 estorno.Id, estorno.ComercianteId, estorno.Tipo.Texto(),
-                estorno.Valor, estorno.Data, estorno.EstornoDe)), JsonOptions);
+                estorno.Valor, estorno.Data, estorno.EstornoDe)));
 
         await InserirLancamentoAsync(conn, tx, estorno, ct);
         await InserirEventoAsync(conn, tx, eventId, evento, agora, ct);

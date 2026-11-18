@@ -22,7 +22,7 @@ O Operador pediu levar para o `Cashflow.Common` todo e qualquer código repetido
 
 ## Critérios de aceitação
 
-- [ ] Build e a suíte (24) verdes.
-- [ ] O `docker compose up` sobe e o demo do README passa.
-- [ ] Nenhum comportamento observável muda.
-- [ ] ArchTest atualizado: Application/Infrastructure podem referenciar o Common; o Domain não; o Contracts não referencia serviço nem o Common.
+- [x] Build e a suíte (24) verdes.
+- [x] O `docker compose up` sobe e o demo do README passa.
+- [x] Nenhum comportamento observável muda.
+- [x] ArchTest atualizado: Application/Infrastructure podem referenciar o Common; o Domain não; o Contracts não referencia serviço nem o Common.

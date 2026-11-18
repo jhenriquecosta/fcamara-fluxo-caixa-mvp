@@ -1,8 +1,7 @@
-using System.Text.Json;
+using Cashflow.Common.Messaging;
+using Cashflow.Contracts;
 using Cashflow.Lancamentos.Infrastructure.Observability;
-using Confluent.Kafka;
 using Dapper;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -11,7 +10,7 @@ namespace Cashflow.Lancamentos.Infrastructure.Persistence;
 
 public sealed class OutboxPublisher(
     NpgsqlDataSource dataSource,
-    IConfiguration configuration,
+    KafkaOptions kafka,
     LancamentosMetrics metrics,
     ILogger<OutboxPublisher> logger) : BackgroundService
 {
@@ -19,20 +18,13 @@ public sealed class OutboxPublisher(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var bootstrap = configuration["Kafka:BootstrapServers"];
-        if (string.IsNullOrWhiteSpace(bootstrap))
+        if (!kafka.Habilitado)
         {
             logger.LogWarning("Kafka não configurado — publicador do outbox desligado");
             return;
         }
 
-        var topic = configuration["Kafka:Topic"] ?? "cashflow.lancamentos.v1";
-        using var producer = new ProducerBuilder<string, string>(new ProducerConfig
-        {
-            BootstrapServers = bootstrap,
-            Acks = Acks.All,
-            EnableIdempotence = true
-        }).Build();
+        using var producer = CashflowKafka.CriarProdutor(kafka);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -49,8 +41,9 @@ public sealed class OutboxPublisher(
                 foreach (var row in pendentes)
                 {
                     var chave = ExtrairChave(row.Payload);
-                    await producer.ProduceAsync(topic,
-                        new Message<string, string> { Key = chave, Value = row.Payload }, stoppingToken);
+                    await producer.ProduceAsync(kafka.Topic,
+                        new Confluent.Kafka.Message<string, string> { Key = chave, Value = row.Payload },
+                        stoppingToken);
                     await conn.ExecuteAsync(
                         "UPDATE outbox_event SET publicado_em = now() WHERE id = @id",
                         new { id = row.Id }, tx);
@@ -82,7 +75,8 @@ public sealed class OutboxPublisher(
 
     private static string ExtrairChave(string payload)
     {
-        using var doc = JsonDocument.Parse(payload);
-        return doc.RootElement.GetProperty("payload").GetProperty("comercianteId").GetString() ?? string.Empty;
+        var evento = CashflowEventSerializer.Deserialize<LancamentoEventPayload>(payload)
+            ?? throw new InvalidOperationException("evento do outbox inválido");
+        return evento.Payload.ComercianteId.ToString();
     }
 }
