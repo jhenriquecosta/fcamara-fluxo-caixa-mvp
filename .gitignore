@@ -1,0 +1,13 @@
+# .NET
+bin/
+obj/
+*.user
+.vs/
+TestResults/
+
+# logs locais
+logs/
+
+# ambiente local do Ultron (skills instaladas e insumos do desafio)
+.claude/
+.tmp/
