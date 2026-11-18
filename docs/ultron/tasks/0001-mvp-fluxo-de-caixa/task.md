@@ -4,7 +4,7 @@ tipo: feature
 branch: feature/0001-mvp-fluxo-de-caixa
 estado: em andamento
 responsavel: jhenriquecosta@hotmail.com
-next_skill: ultron-discover
+next_skill: ultron-slices
 issue: #1
 
 ## Contexto
@@ -21,6 +21,13 @@ Artefatos de referência: `docs/requisitos/requisitos.md` (PRD-0001), `docs/ultr
 - Testes dos caminhos críticos (xUnit v3 + Testcontainers).
 - README com instruções de execução local.
 - Documentos restantes do desafio: arquitetura-alvo em texto, transição, custos, observabilidade e segurança de integração.
+
+## Artefatos do rito
+
+- **Descoberta:** `docs/ultron/agents/solution.md` (`## Visão`) — entrevista de 18/11/2026.
+- **Research:** `docs/ultron/agents/research/0001-fatos-2026.md` — fatos de novembro/2026.
+- **PRD da task:** `prd.md` (PRD-0002), sintetizado do PRD-0001 (`docs/requisitos/requisitos.md`).
+- **ADRs:** 0001–0006, aceitos em `docs/ultron/agents/adr/`.
 
 ## Critérios de aceitação
 
