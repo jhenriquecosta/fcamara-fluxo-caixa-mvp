@@ -2,9 +2,10 @@
 
 tipo: refactor
 branch: refactor/0004-modular-monolith
-estado: em andamento
+publicacao: pendente
+estado: concluído
 responsavel: jhenriquecosta@hotmail.com
-next_skill: ultron-verify
+next_skill: 
 issue: #15
 
 ## Contexto
