@@ -50,7 +50,7 @@ O serviço expõe `/metrics` no formato Prometheus. Métricas obrigatórias, con
 | `consumer_lag` | lag do consumidor por partição |
 | `dlt_events_total` | eventos enviados à DLT |
 | `http_server_5xx_total` / `http_server_requests_total` | taxa de 5xx sobre o total |
-| `db_pool_saturation` | conexões em uso sobre o máximo do pool |
+| `db_pool_saturation` | conexões em uso sobre o máximo do pool — **não exposta pelo driver neste MVP**; no alvo vem das métricas do RDS no CloudWatch |
 | `lancamentos_total{resultado}` | registrados, idempotentes e conflitos |
 
 ## Eventos que sempre devem ser logados

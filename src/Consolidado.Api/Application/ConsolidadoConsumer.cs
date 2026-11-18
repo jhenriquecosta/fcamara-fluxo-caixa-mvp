@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Cashflow.Consolidado.Api.Observability;
 using Confluent.Kafka;
 using Dapper;
 using Npgsql;
@@ -11,8 +12,16 @@ namespace Cashflow.Consolidado.Api.Application;
 public sealed class ConsolidadoConsumer(
     NpgsqlDataSource dataSource,
     IConfiguration configuration,
+    ConsolidadoMetrics metrics,
     ILogger<ConsolidadoConsumer> logger) : BackgroundService
 {
+    private static readonly TimeSpan[] Tentativas =
+    {
+        TimeSpan.FromSeconds(1),
+        TimeSpan.FromSeconds(2),
+        TimeSpan.FromSeconds(4)
+    };
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var bootstrap = configuration["Kafka:BootstrapServers"];
@@ -23,6 +32,8 @@ public sealed class ConsolidadoConsumer(
         }
 
         var topic = configuration["Kafka:Topic"] ?? "cashflow.lancamentos.v1";
+        var dltTopic = configuration["Kafka:DltTopic"] ?? "cashflow.lancamentos.v1.dlt";
+
         var config = new ConsumerConfig
         {
             BootstrapServers = bootstrap,
@@ -32,6 +43,12 @@ public sealed class ConsolidadoConsumer(
         };
 
         using var consumer = new ConsumerBuilder<string, string>(config).Build();
+        using var producer = new ProducerBuilder<string, string>(new ProducerConfig
+        {
+            BootstrapServers = bootstrap,
+            Acks = Acks.All
+        }).Build();
+
         consumer.Subscribe(topic);
 
         while (!stoppingToken.IsCancellationRequested)
@@ -54,20 +71,67 @@ public sealed class ConsolidadoConsumer(
             if (resultado is null || resultado.IsPartitionEOF)
                 continue;
 
-            try
+            RegistrarLag(consumer, resultado);
+
+            var commit = true;
+            var processado = false;
+            for (var tentativa = 0; tentativa < 4 && !processado; tentativa++)
             {
-                await ProcessarAsync(resultado.Message.Value, stoppingToken);
+                try
+                {
+                    await ProcessarAsync(resultado.Message.Value, stoppingToken);
+                    processado = true;
+                }
+                catch (Exception ex)
+                {
+                    if (tentativa < 3)
+                    {
+                        logger.LogWarning(ex, "tentativa {Tentativa} de 4 falhou; tentando de novo", tentativa + 1);
+                        try { await Task.Delay(Tentativas[tentativa], stoppingToken); }
+                        catch (OperationCanceledException) { return; }
+                    }
+                    else
+                    {
+                        logger.LogError(ex, "falha persistente; enviando o evento para a DLT {DltTopic}", dltTopic);
+                        try
+                        {
+                            await producer.ProduceAsync(dltTopic, new Message<string, string>
+                            {
+                                Key = resultado.Message.Key,
+                                Value = resultado.Message.Value
+                            }, stoppingToken);
+                            metrics.Dlt();
+                        }
+                        catch (Exception dltEx)
+                        {
+                            logger.LogError(dltEx, "falha ao enviar para a DLT; offset não commitado");
+                            commit = false;
+                        }
+                    }
+                }
+            }
+
+            if (commit)
                 consumer.Commit(resultado);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "falha ao processar o evento; sem commit (retries e DLT entram na fatia 4)");
-                try { await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken); }
-                catch (OperationCanceledException) { break; }
-            }
         }
 
         consumer.Close();
+    }
+
+    private void RegistrarLag(IConsumer<string, string> consumer, ConsumeResult<string, string> resultado)
+    {
+        try
+        {
+            var watermark = consumer.QueryWatermarkOffsets(resultado.TopicPartition, TimeSpan.FromSeconds(5));
+            var commitado = consumer.Committed(new[] { resultado.TopicPartition }, TimeSpan.FromSeconds(5))
+                .FirstOrDefault();
+            var lag = watermark.High.Value - (commitado?.Offset.Value ?? watermark.Low.Value);
+            metrics.Lag(Math.Max(0, lag));
+        }
+        catch (KafkaException)
+        {
+            // métricas são observação; a ausência de lag não interrompe o consumo
+        }
     }
 
     private async Task ProcessarAsync(string json, CancellationToken ct)

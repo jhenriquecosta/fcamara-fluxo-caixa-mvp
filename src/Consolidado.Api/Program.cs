@@ -4,6 +4,7 @@ using System.Text;
 using Cashflow.Consolidado.Api.Application;
 using Cashflow.Consolidado.Api.Auth;
 using Cashflow.Consolidado.Api.Infrastructure;
+using Cashflow.Consolidado.Api.Observability;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
@@ -39,6 +40,7 @@ builder.Services.AddSingleton(_ => new NpgsqlDataSourceBuilder(
         builder.Configuration.GetConnectionString("Postgres")
         ?? throw new InvalidOperationException("ConnectionStrings:Postgres não configurada")).Build());
 builder.Services.AddSingleton<ConsolidadoService>();
+builder.Services.AddSingleton<ConsolidadoMetrics>();
 builder.Services.AddHostedService<ConsolidadoConsumer>();
 
 var signingKey = new SymmetricSecurityKey(
@@ -87,6 +89,7 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddOpenTelemetry()
     .WithMetrics(metrics => metrics
         .AddAspNetCoreInstrumentation()
+        .AddMeter(ConsolidadoMetrics.MeterName)
         .AddPrometheusExporter());
 
 var app = builder.Build();

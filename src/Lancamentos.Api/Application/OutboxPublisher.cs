@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Cashflow.Lancamentos.Api.Observability;
 using Confluent.Kafka;
 using Dapper;
 using Npgsql;
@@ -8,6 +9,7 @@ namespace Cashflow.Lancamentos.Api.Application;
 public sealed class OutboxPublisher(
     NpgsqlDataSource dataSource,
     IConfiguration configuration,
+    LancamentosMetrics metrics,
     ILogger<OutboxPublisher> logger) : BackgroundService
 {
     private sealed record OutboxRow(Guid Id, string Payload);
@@ -52,6 +54,12 @@ public sealed class OutboxPublisher(
                 }
 
                 await tx.CommitAsync(stoppingToken);
+
+                var idade = await conn.ExecuteScalarAsync<double>("""
+                    SELECT COALESCE(EXTRACT(EPOCH FROM (now() - MIN(criado_em))), 0)::float8
+                    FROM outbox_event WHERE publicado_em IS NULL
+                    """);
+                metrics.OutboxAge(idade);
 
                 if (pendentes.Count == 0)
                     await Task.Delay(TimeSpan.FromMilliseconds(500), stoppingToken);

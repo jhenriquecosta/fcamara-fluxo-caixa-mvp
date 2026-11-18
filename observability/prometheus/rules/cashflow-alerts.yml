@@ -61,15 +61,6 @@ groups:
           summary: "Evento enviado à DLT"
           description: "Um evento falhou de forma persistente; investigue o motivo antes de reprocessar."
 
-      - alert: CashflowPoolSaturationHigh
-        expr: max(cashflow_db_pool_saturation) > 0.8
-        for: 5m
-        labels:
-          severity: warning
-          service: cashflow
-        annotations:
-          summary: "Pool de conexões acima de 80% de uso"
-          description: "Risco de esgotar o pool; confira a carga e o número de conexões."
 
       - alert: CashflowServiceDown
         expr: up{job=~"lancamentos|consolidado"} == 0
