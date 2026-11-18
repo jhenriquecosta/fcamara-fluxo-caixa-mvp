@@ -5,7 +5,7 @@ branch: feature/0001-mvp-fluxo-de-caixa
 slices_fechados: #2, #3, #4, #5, #7, #6
 estado: em andamento
 responsavel: jhenriquecosta@hotmail.com
-next_skill: ultron-coder
+next_skill: ultron-review
 issue: #1
 
 ## Contexto
