@@ -1,0 +1,18 @@
+groups:
+  - name: cashflow.recording
+    interval: 30s
+    rules:
+      - record: job:http_server_request_duration_seconds:p95
+        expr: histogram_quantile(0.95, sum by (service, le) (rate(http_server_request_duration_seconds_bucket[5m])))
+
+      - record: job:http_server_request_duration_seconds:p99
+        expr: histogram_quantile(0.99, sum by (service, le) (rate(http_server_request_duration_seconds_bucket[5m])))
+
+      - record: job:cashflow_request_rate:5m
+        expr: sum by (service) (rate(http_server_request_duration_seconds_count[5m]))
+
+      - record: job:cashflow_error_rate:5m
+        expr: |
+          sum by (service) (rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[5m]))
+          /
+          sum by (service) (rate(http_server_request_duration_seconds_count[5m]))

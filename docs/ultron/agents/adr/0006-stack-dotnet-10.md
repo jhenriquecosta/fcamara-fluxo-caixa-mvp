@@ -6,7 +6,7 @@
 | **Projeto** | fcamara-fluxo-caixa-mvp |
 | **Autor** | ULTRON · skill ultron-adr — Operador: J Henrique Costa |
 | **Data** | 2026-11-18 |
-| **Versão do documento** | 1.1 |
+| **Versão do documento** | 1.2 |
 | **Status** | accepted |
 | **Rastreabilidade** | Desafio Carrefour (via FCamara) · PRD-0001 · Research #0001 · ADR-010 (desenho-base) |
 
@@ -22,7 +22,7 @@ A pesquisa também mudou uma escolha que parecia óbvia: o **MassTransit v9 viro
 
 - **Runtime:** .NET 10 LTS (`net10.0`), ASP.NET Core 10; APIs organizadas por endpoint, com a autenticação em filtro.
 - **Kafka:** Confluent.Kafka **2.16.0** (suporte a .NET 10).
-- **PostgreSQL:** Npgsql **10.0.3** e Dapper **2.1.79** para SQL explícito; migrações SQL versionadas aplicadas na subida, com tabela de versão. O pool de conexões do Npgsql substitui as notas de JDBC do ADR-010.
+- **PostgreSQL:** Npgsql **10.0.3** e Dapper **2.1.89** para SQL explícito; migrações SQL versionadas aplicadas na subida, com tabela de versão. O pool de conexões do Npgsql substitui as notas de JDBC do ADR-010.
 - **Outbox e consumo:** implementação própria com Npgsql e `BackgroundService` — é o que o ADR-010 já desenha e mantém o mecanismo visível. **Wolverine** (MIT) fica como alternativa de framework; **MassTransit v9 não entra** por licença, e o v8 não entra por fim de suporte.
 - **Autenticação:** Cognito no alvo (authorization code + PKCE para pessoas, client credentials para integradores, JWKS, escopos). No ambiente local, um emissor de desenvolvimento assina JWTs com as mesmas claims e escopos; a API valida issuer, audience e JWKS por configuração.
 - **Testes:** xUnit v3, Testcontainers 4.x para PostgreSQL e Kafka, `WebApplicationFactory` para a API.
@@ -52,6 +52,7 @@ A pesquisa também mudou uma escolha que parecia óbvia: o **MassTransit v9 viro
 |---|---|---|---|
 | 1.0 | 2026-11-18 | ULTRON · ultron-adr | Criação |
 | 1.1 | 2026-11-18 | ULTRON · ultron-adr | Operador aceita a decisão — status accepted |
+| 1.2 | 2026-11-18 | ULTRON · ultron-adr | Revisão: Dapper 2.1.89, a versão estável usada no build |
 
 **Rastreabilidade.** Desafio Carrefour (via FCamara) › repositório `fcamara-fluxo-caixa-mvp` › PRD-0001 › ADR-0006.
 

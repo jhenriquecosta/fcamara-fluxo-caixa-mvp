@@ -1,0 +1,48 @@
+# SLOs do fluxo de caixa — metas propostas
+# As metas abaixo derivam do PRD-0002 (RNF-3 a RNF-5) e do enunciado do desafio.
+# São propostas a validar no alvo, não fatos medidos.
+
+service: cashflow
+owner: jhenriquecosta
+slos:
+  - name: Disponibilidade dos lançamentos
+    type: availability
+    target: 99.9%
+    window: 30d
+    good_events: 'http_server_request_duration_seconds_count{service="lancamentos", http_response_status_code!~"5.."}'
+    total_events: 'http_server_request_duration_seconds_count{service="lancamentos"}'
+
+  - name: Disponibilidade do consolidado
+    type: availability
+    target: 99.5%
+    window: 30d
+    good_events: 'http_server_request_duration_seconds_count{service="consolidado", http_response_status_code!~"5.."}'
+    total_events: 'http_server_request_duration_seconds_count{service="consolidado"}'
+
+  - name: Latência p95 dos lançamentos
+    type: latency
+    target: 95%
+    threshold: 300ms
+    window: 30d
+
+  - name: Latência p95 do consolidado
+    type: latency
+    target: 95%
+    threshold: 200ms
+    window: 30d
+
+  - name: Frescor do consolidado
+    type: freshness
+    target: 99%
+    threshold: 60s
+    window: 30d
+    description: 'Eventos aplicados à projeção em até 60 segundos, p95'
+
+error_budget_policy:
+  burn_rate_alerts:
+    - burn_rate: 14.4
+      window: 1h
+      severity: critical
+    - burn_rate: 6
+      window: 6h
+      severity: warning
