@@ -95,7 +95,7 @@ A convenção de logs e as métricas estão em [`docs/ultron/agents/logging.md`]
 ## Estrutura
 
 ```
-src/Cashflow.Common/                      lib comum: auth, Serilog, OpenTelemetry, request context, tempo
+src/Cashflow.Common/                      lib comum: auth, Serilog, OpenTelemetry, request context, tempo, Postgres/schema, configuração, hashes, problemas e Kafka
 src/Cashflow.Contracts/                   envelope do evento, tipos e tópicos (schema do barramento)
 src/Cashflow.Lancamentos.Domain/          regras do lançamento e do estorno, dia do negócio, portas
 src/Cashflow.Lancamentos.Application/     casos de uso e orquestração da idempotência

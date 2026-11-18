@@ -4,7 +4,6 @@ using Cashflow.Consolidado.Api.Endpoints;
 using Cashflow.Consolidado.Application;
 using Cashflow.Consolidado.Infrastructure;
 using Cashflow.Consolidado.Infrastructure.Observability;
-using Cashflow.Consolidado.Infrastructure.Persistence;
 using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,7 +14,7 @@ builder.Services.AddConsolidadoInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
-await Migrator.ApplyAsync(app.Services.GetRequiredService<NpgsqlDataSource>());
+await app.Services.GetRequiredService<NpgsqlDataSource>().ApplyConsolidadoSchemaAsync();
 
 app.UseCashflowWeb();
 app.MapCashflowEndpoints();

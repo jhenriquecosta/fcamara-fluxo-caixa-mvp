@@ -1,10 +1,9 @@
-using System.Globalization;
-using System.Text.Json;
+using Cashflow.Common.Messaging;
+using Cashflow.Contracts;
 using Cashflow.Consolidado.Application;
 using Cashflow.Consolidado.Domain;
 using Cashflow.Consolidado.Infrastructure.Observability;
 using Confluent.Kafka;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -13,7 +12,7 @@ namespace Cashflow.Consolidado.Infrastructure.Messaging;
 
 public sealed class ConsolidadoConsumer(
     NpgsqlDataSource dataSource,
-    IConfiguration configuration,
+    KafkaOptions kafka,
     ConsolidadoMetrics metrics,
     ProjetarEventoHandler projecao,
     ILogger<ConsolidadoConsumer> logger) : BackgroundService
@@ -27,32 +26,16 @@ public sealed class ConsolidadoConsumer(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var bootstrap = configuration["Kafka:BootstrapServers"];
-        if (string.IsNullOrWhiteSpace(bootstrap))
+        if (!kafka.Habilitado)
         {
             logger.LogWarning("Kafka não configurado — consumidor do consolidado desligado");
             return;
         }
 
-        var topic = configuration["Kafka:Topic"] ?? "cashflow.lancamentos.v1";
-        var dltTopic = configuration["Kafka:DltTopic"] ?? "cashflow.lancamentos.v1.dlt";
+        using var consumer = CashflowKafka.CriarConsumidor(kafka);
+        using var producer = CashflowKafka.CriarProdutorDlt(kafka);
 
-        var config = new ConsumerConfig
-        {
-            BootstrapServers = bootstrap,
-            GroupId = configuration["Kafka:GroupId"] ?? "consolidado",
-            AutoOffsetReset = AutoOffsetReset.Earliest,
-            EnableAutoCommit = false
-        };
-
-        using var consumer = new ConsumerBuilder<string, string>(config).Build();
-        using var producer = new ProducerBuilder<string, string>(new ProducerConfig
-        {
-            BootstrapServers = bootstrap,
-            Acks = Acks.All
-        }).Build();
-
-        consumer.Subscribe(topic);
+        consumer.Subscribe(kafka.Topic);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -95,10 +78,10 @@ public sealed class ConsolidadoConsumer(
                     }
                     else
                     {
-                        logger.LogError(ex, "falha persistente; enviando o evento para a DLT {DltTopic}", dltTopic);
+                        logger.LogError(ex, "falha persistente; enviando o evento para a DLT {DltTopic}", kafka.DltTopic);
                         try
                         {
-                            await producer.ProduceAsync(dltTopic, new Message<string, string>
+                            await producer.ProduceAsync(kafka.DltTopic, new Message<string, string>
                             {
                                 Key = resultado.Message.Key,
                                 Value = resultado.Message.Value
@@ -139,16 +122,11 @@ public sealed class ConsolidadoConsumer(
 
     private async Task ProcessarAsync(string json, CancellationToken ct)
     {
-        using var doc = JsonDocument.Parse(json);
-        var root = doc.RootElement;
-        var eventId = root.GetProperty("eventId").GetGuid();
-        var payload = root.GetProperty("payload");
-        var comerciante = payload.GetProperty("comercianteId").GetGuid();
-        var tipo = payload.GetProperty("tipo").GetString() ?? "debito";
-        var valor = payload.GetProperty("valor").GetDecimal();
-        var data = DateOnly.ParseExact(
-            payload.GetProperty("data").GetString()!, "yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var evento = CashflowEventSerializer.Deserialize<LancamentoEventPayload>(json)
+            ?? throw new InvalidOperationException("evento inválido no tópico");
+        var payload = evento.Payload;
 
-        await projecao.HandleAsync(new LancamentoEvento(eventId, comerciante, tipo, valor, data), ct);
+        await projecao.HandleAsync(new LancamentoEvento(
+            evento.EventId, payload.ComercianteId, payload.Tipo, payload.Valor, payload.Data), ct);
     }
 }

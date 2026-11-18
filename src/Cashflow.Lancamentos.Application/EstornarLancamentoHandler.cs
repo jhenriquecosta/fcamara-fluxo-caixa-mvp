@@ -1,3 +1,4 @@
+using Cashflow.Common.Security;
 using Cashflow.Lancamentos.Domain;
 using Cashflow.Lancamentos.Domain.Ports;
 using Microsoft.Extensions.Logging;
@@ -14,8 +15,8 @@ public sealed class EstornarLancamentoHandler(
     public async Task<RegistroResultado> HandleAsync(EstornarLancamentoCommand comando, CancellationToken ct)
     {
         var hash = comando.LancamentoId.ToString();
-        var comercianteHash = LancamentoCorpo.HashComerciante(comando.ComercianteId);
-        var chaveHash = LancamentoCorpo.HashChave(comando.IdempotencyKey);
+        var comercianteHash = Hashes.Comerciante(comando.ComercianteId);
+        var chaveHash = Hashes.Chave(comando.IdempotencyKey);
 
         var claim = await idempotencia.ReivindicarAsync(
             comando.ComercianteId, comando.IdempotencyKey, hash, ct);

@@ -27,15 +27,13 @@ public sealed class Camadas
         SemDependencia(typeof(Lancamento).Assembly,
             "Cashflow.Lancamentos.Application",
             "Cashflow.Lancamentos.Infrastructure",
-            "Cashflow.Lancamentos.Api",
-            "Cashflow.Common");
+            "Cashflow.Lancamentos.Api");
 
     [Fact]
     public void Aplicacao_de_lancamentos_nao_conhece_infraestrutura_nem_api() =>
         SemDependencia(typeof(Cashflow.Lancamentos.Application.LancamentoCorpo).Assembly,
             "Cashflow.Lancamentos.Infrastructure",
-            "Cashflow.Lancamentos.Api",
-            "Cashflow.Common");
+            "Cashflow.Lancamentos.Api");
 
     [Fact]
     public void Infraestrutura_de_lancamentos_nao_conhece_a_api() =>
@@ -47,15 +45,13 @@ public sealed class Camadas
         SemDependencia(typeof(ConsolidadoDiario).Assembly,
             "Cashflow.Consolidado.Application",
             "Cashflow.Consolidado.Infrastructure",
-            "Cashflow.Consolidado.Api",
-            "Cashflow.Common");
+            "Cashflow.Consolidado.Api");
 
     [Fact]
     public void Aplicacao_do_consolidado_nao_conhece_infraestrutura_nem_api() =>
         SemDependencia(typeof(Cashflow.Consolidado.Application.ConsultarConsolidadoHandler).Assembly,
             "Cashflow.Consolidado.Infrastructure",
-            "Cashflow.Consolidado.Api",
-            "Cashflow.Common");
+            "Cashflow.Consolidado.Api");
 
     [Fact]
     public void Lib_comum_nao_conhece_nenhum_servico() =>

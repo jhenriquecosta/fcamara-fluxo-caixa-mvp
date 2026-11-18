@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+using Cashflow.Common.Security;
 using Cashflow.Consolidado.Domain;
 using Cashflow.Consolidado.Domain.Ports;
 using Microsoft.Extensions.Logging;
@@ -12,7 +12,7 @@ public sealed class ProjetarEventoHandler(
     public async Task HandleAsync(LancamentoEvento evento, CancellationToken ct)
     {
         var resultado = await projecao.AplicarAsync(evento, ct);
-        var comercianteHash = HashComerciante(evento.ComercianteId);
+        var comercianteHash = Hashes.Comerciante(evento.ComercianteId);
 
         if (resultado == ProjecaoResultado.Duplicado)
         {
@@ -24,7 +24,4 @@ public sealed class ProjetarEventoHandler(
         logger.LogInformation("evento aplicado {EventId} {ComercianteHash} {Data} {Delta}",
             evento.EventId, comercianteHash, evento.Data, evento.Delta);
     }
-
-    private static string HashComerciante(Guid id) =>
-        Convert.ToHexString(SHA256.HashData(id.ToByteArray()))[..16].ToLowerInvariant();
 }

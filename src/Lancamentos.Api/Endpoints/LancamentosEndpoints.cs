@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using Cashflow.Common.Auth;
+using Cashflow.Common.Errors;
 using Cashflow.Lancamentos.Application;
 using Cashflow.Lancamentos.Domain;
 using Cashflow.Lancamentos.Infrastructure.Observability;
@@ -22,7 +23,7 @@ public static class LancamentosEndpoints
         {
             var chave = request.Headers["Idempotency-Key"].FirstOrDefault();
             if (string.IsNullOrWhiteSpace(chave))
-                return Results.Problem(statusCode: 400, title: "Idempotency-Key é obrigatório");
+                return CashflowProblems.IdempotencyKeyObrigatoria();
 
             LancamentoRequest? body;
             try
@@ -31,18 +32,15 @@ public static class LancamentosEndpoints
             }
             catch (JsonException)
             {
-                return Results.Problem(statusCode: 400, title: "corpo inválido");
+                return CashflowProblems.CorpoInvalido();
             }
 
             if (body is null || body.Valor <= 0 ||
                 !TipoLancamentoExtensions.TryParseTexto(body.Tipo, out var tipo))
-            {
-                return Results.Problem(statusCode: 422, title: "lançamento inválido",
-                    detail: "valor deve ser maior que zero e tipo deve ser debito ou credito");
-            }
+                return CashflowProblems.LancamentoInvalido();
 
             if (CashflowAuth.ComercianteId(user) is not { } comercianteId)
-                return Results.Problem(statusCode: 403, title: "token sem comercianteId");
+                return CashflowProblems.TokenSemComerciante();
 
             var resultado = await handler.HandleAsync(
                 new RegistrarLancamentoCommand(comercianteId, tipo, body.Valor, body.Descricao, chave), ct);
@@ -59,10 +57,10 @@ public static class LancamentosEndpoints
         {
             var chave = request.Headers["Idempotency-Key"].FirstOrDefault();
             if (string.IsNullOrWhiteSpace(chave))
-                return Results.Problem(statusCode: 400, title: "Idempotency-Key é obrigatório");
+                return CashflowProblems.IdempotencyKeyObrigatoria();
 
             if (CashflowAuth.ComercianteId(user) is not { } comercianteId)
-                return Results.Problem(statusCode: 403, title: "token sem comercianteId");
+                return CashflowProblems.TokenSemComerciante();
 
             var resultado = await handler.HandleAsync(
                 new EstornarLancamentoCommand(comercianteId, id, chave), ct);
@@ -85,21 +83,18 @@ public static class LancamentosEndpoints
                 return Results.Content(idempotente.RespostaJson, "application/json", statusCode: 201);
             case RegistroResultado.PayloadDivergente:
                 metrics.ConflitoPayload();
-                return Results.Problem(statusCode: 422, title: estorno
-                    ? "mesma idempotency key com outro lançamento"
-                    : "mesma idempotency key com corpo diferente");
+                return CashflowProblems.PayloadDivergente(estorno);
             case RegistroResultado.EmProcessamento:
                 metrics.ConflitoConcorrente();
-                return Results.Problem(statusCode: 409,
-                    title: "requisição em processamento para esta idempotency key");
+                return CashflowProblems.EmProcessamento();
             case RegistroResultado.NaoEncontrado:
-                return Results.Problem(statusCode: 404, title: "lançamento não encontrado para este comerciante");
+                return CashflowProblems.NaoEncontrado();
             case RegistroResultado.RegraInvalida:
-                return Results.Problem(statusCode: 422, title: "um estorno não pode ser estornado");
+                return CashflowProblems.RegraInvalida();
             case RegistroResultado.Conflito:
-                return Results.Problem(statusCode: 409, title: "lançamento já estornado");
+                return CashflowProblems.JaEstornado();
             default:
-                return Results.Problem(statusCode: 500);
+                return CashflowProblems.Inesperado();
         }
     }
 }

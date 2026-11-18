@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Claims;
 using Cashflow.Common.Auth;
+using Cashflow.Common.Errors;
 using Cashflow.Consolidado.Application;
 
 namespace Cashflow.Consolidado.Api.Endpoints;
@@ -17,10 +18,10 @@ public static class ConsolidadoEndpoints
         {
             if (!DateOnly.TryParseExact(data, "yyyy-MM-dd", CultureInfo.InvariantCulture,
                     DateTimeStyles.None, out var dia))
-                return Results.Problem(statusCode: 400, title: "data inválida; use yyyy-MM-dd");
+                return CashflowProblems.DataInvalida();
 
             if (CashflowAuth.ComercianteId(user) is not { } comercianteId)
-                return Results.Problem(statusCode: 403, title: "token sem comercianteId");
+                return CashflowProblems.TokenSemComerciante();
 
             return Results.Ok(await handler.HandleAsync(comercianteId, dia, ct));
         }).RequireAuthorization(Scopes.ConsolidadoRead);

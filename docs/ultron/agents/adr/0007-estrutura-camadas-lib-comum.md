@@ -3,7 +3,7 @@
 **Status:** accepted
 **Data:** 2026-11-18
 **Decisores:** J Henrique Costa (Operador) · ULTRON
-**Versão do documento:** 1.0
+**Versão do documento:** 1.1
 **Relacionados:** ADR-0001 (dois serviços), ADR-0006 (stack), `docs/arquitetura/arquitetura-alvo.md`
 
 ## Contexto
@@ -12,7 +12,7 @@ A entrega inicial concentrava, em cada serviço, um `Program.cs` com composiçã
 
 ## Decisão
 
-- **`Cashflow.Common`** — a lib comum, sem dependência de serviço: auth (JWT, DevToken, políticas de escopo), Serilog, OpenTelemetry/Prometheus, request context (requestId/traceId/correlation), health, `/metrics` e o tempo (TimeProvider + fuso do negócio).
+- **`Cashflow.Common`** — a lib comum, sem dependência de serviço: auth (JWT, DevToken, políticas de escopo), Serilog, OpenTelemetry/Prometheus, request context (requestId/traceId/correlation), health, `/metrics` e o tempo (TimeProvider + fuso do negócio). O boilerplate compartilhado vive aqui: `AddCashflowPostgres`/`SqlSchema` (base de dados e migração), `CashflowDefaults` (configuração com precedência para o appsettings e o ambiente), `Hashes`, `CashflowProblems` (erros HTTP) e `KafkaOptions`/`CashflowKafka` (mensageria). O `CashflowJson`/`CashflowEventSerializer` ficam nos Contracts, donos do schema.
 - **`Cashflow.Contracts`** — o envelope `CashflowEvent<T>`, o `LancamentoEventPayload`, os tipos de evento e os tópicos. É o schema do barramento, compartilhado pelos dois lados.
 - **Por serviço, quatro camadas:**
   - `Domain` — as regras (`Lancamento`, `Estornar`, `DiaDeNegocio`, `LancamentoEvento.Delta`), as portas (`IRegistroDeLancamentos`, `IPortDeIdempotencia`, `IConsultaConsolidado`, `IProjecaoConsolidado`) e nenhuma dependência externa.

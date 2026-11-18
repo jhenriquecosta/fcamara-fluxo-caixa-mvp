@@ -1,3 +1,4 @@
+using Cashflow.Common.Data;
 using Cashflow.Lancamentos.Domain.Ports;
 using Cashflow.Lancamentos.Infrastructure.Observability;
 using Cashflow.Lancamentos.Infrastructure.Persistence;
@@ -12,15 +13,16 @@ public static class InfrastructureDependencyInjection
     public static IServiceCollection AddLancamentosInfrastructure(
         this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddSingleton(_ => new NpgsqlDataSourceBuilder(
-                configuration.GetConnectionString("Postgres")
-                ?? throw new InvalidOperationException("ConnectionStrings:Postgres não configurada")).Build());
-
+        services.AddCashflowPostgres(configuration);
         services.AddSingleton<LancamentosMetrics>();
         services.AddSingleton<IRegistroDeLancamentos, LancamentoRepository>();
         services.AddSingleton<IPortDeIdempotencia, IdempotenciaStore>();
         services.AddHostedService<OutboxPublisher>();
-
         return services;
     }
+
+    public static Task ApplyLancamentosSchemaAsync(
+        this NpgsqlDataSource dataSource, CancellationToken ct = default) =>
+        SqlSchema.ApplyAsync(dataSource, typeof(InfrastructureDependencyInjection).Assembly,
+            "Cashflow.Lancamentos.Infrastructure.Schema.sql", ct);
 }
