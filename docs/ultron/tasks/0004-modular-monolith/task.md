@@ -2,7 +2,7 @@
 
 tipo: refactor
 branch: refactor/0004-modular-monolith
-publicacao: pendente
+publicacao: https://github.com/jhenriquecosta/fcamara-fluxo-caixa-mvp/pull/16
 estado: concluído
 responsavel: jhenriquecosta@hotmail.com
 next_skill: 
