@@ -55,7 +55,7 @@ Artefatos de referência: `docs/requisitos/requisitos.md` (PRD-0001), `docs/ultr
 | 3 | Estorno imutável | #4 | fechada (local) |
 | 4 | Resiliência, observabilidade e carga | #5 | fechada (local) |
 | 5 | Execução local e README | #6 | aberta |
-| 6 | Documentação dos diferenciais | #7 | aberta |
+| 6 | Documentação dos diferenciais | #7 | fechada (local) |
 
 ## Exceções registradas (escape consciente)
 
