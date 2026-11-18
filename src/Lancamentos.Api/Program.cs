@@ -42,6 +42,7 @@ builder.Services.AddSingleton(_ => new NpgsqlDataSourceBuilder(
         builder.Configuration.GetConnectionString("Postgres")
         ?? throw new InvalidOperationException("ConnectionStrings:Postgres não configurada")).Build());
 builder.Services.AddSingleton<LancamentoService>();
+builder.Services.AddHostedService<OutboxPublisher>();
 
 var signingKey = new SymmetricSecurityKey(
     Encoding.UTF8.GetBytes(builder.Configuration["Auth:SigningKey"]

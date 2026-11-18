@@ -1,3 +1,4 @@
+using Cashflow.Lancamentos.Api;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -6,30 +7,31 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Cashflow.Lancamentos.Api.Tests;
 
-public sealed class ApiFactory : WebApplicationFactory<Program>
+public sealed class ApiFactory : WebApplicationFactory<LancamentosApiEntryPoint>
 {
     private readonly string _connectionString;
     private readonly DateTimeOffset? _now;
+    private readonly string? _kafkaBootstrap;
 
     static ApiFactory()
     {
-        // O appsettings define a chave de desenvolvimento; o teste sobrescreve
-        // por variável de ambiente, que tem precedência sobre o JSON.
         Environment.SetEnvironmentVariable("Auth__Issuer", TestTokens.Issuer);
         Environment.SetEnvironmentVariable("Auth__Audience", TestTokens.Audience);
         Environment.SetEnvironmentVariable("Auth__SigningKey", TestTokens.SigningKey);
         Environment.SetEnvironmentVariable("Serilog__MinimumLevel__Default", "Warning");
     }
 
-    public ApiFactory(string connectionString, DateTimeOffset? now = null)
+    public ApiFactory(string connectionString, DateTimeOffset? now = null, string? kafkaBootstrap = null)
     {
         _connectionString = connectionString;
         _now = now;
+        _kafkaBootstrap = kafkaBootstrap;
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         Environment.SetEnvironmentVariable("ConnectionStrings__Postgres", _connectionString);
+        Environment.SetEnvironmentVariable("Kafka__BootstrapServers", _kafkaBootstrap ?? "");
         builder.UseEnvironment("Testing");
 
         if (_now is not null)
