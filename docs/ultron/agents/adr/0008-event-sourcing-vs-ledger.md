@@ -1,9 +1,9 @@
 # ADR-0008 — Event sourcing versus ledger append-only com outbox
 
-**Status:** proposed
+**Status:** accepted
 **Data:** 2026-11-18
 **Decisores:** J Henrique Costa (premissa) · ULTRON (avaliação)
-**Versão do documento:** 1.0
+**Versão do documento:** 1.1
 **Relacionados:** ADR-0001 (dois serviços com outbox e projeção), ADR-0004 (idempotência e estorno), ADR-0005 (projeção e dia do registro), Research #0001 (perguntas 7 e 8)
 
 ## Contexto
@@ -89,3 +89,4 @@ O desenho tem dois serviços, entrega ao menos uma vez, idempotência com 422/40
 | Versão | Data | Autor | Mudança |
 |---|---|---|---|
 | 1.0 | 2026-11-18 | ULTRON · ultron-adr | Avaliação do event sourcing contra o ledger com outbox; proposta de manter com gatilhos de evolução |
+| 1.1 | 2026-11-18 | J Henrique Costa · ULTRON | Operador aceita a decisão — status accepted: o ledger com outbox permanece, com os gatilhos de evolução registrados |
