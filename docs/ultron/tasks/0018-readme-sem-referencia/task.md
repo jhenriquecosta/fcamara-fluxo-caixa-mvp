@@ -2,10 +2,11 @@
 
 tipo: chore
 branch: chore/0018-readme-sem-referencia
-estado: em andamento
+publicacao: pendente
+estado: concluído
 worktree: .claude/worktrees/chore-0018-readme-sem-referencia
 responsavel: jhenriquecosta@hotmail.com
-next_skill: ultron-coder
+next_skill: 
 issue: #47
 
 Ajuste de entrega: remover as citações ao repositório Practical.CleanArchitecture do README e explicar o porquê dos estilos adotados (monólito modular, command/query com dispatcher, BFF, outbox) por si mesmos; acrescentar uma seção com os links dos READMEs de cada projeto (src, tests, observabilidade).
