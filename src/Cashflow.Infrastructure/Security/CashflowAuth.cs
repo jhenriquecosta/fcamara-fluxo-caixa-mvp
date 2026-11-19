@@ -51,6 +51,8 @@ public static class CashflowAuth
         {
             options.AddPolicy(Scopes.LancamentosWrite, policy =>
                 policy.RequireAssertion(context => HasScope(context.User, Scopes.LancamentosWrite)));
+            options.AddPolicy(Scopes.LancamentosRead, policy =>
+                policy.RequireAssertion(context => HasScope(context.User, Scopes.LancamentosRead)));
             options.AddPolicy(Scopes.ConsolidadoRead, policy =>
                 policy.RequireAssertion(context => HasScope(context.User, Scopes.ConsolidadoRead)));
         });
@@ -68,7 +70,8 @@ public static class CashflowAuth
 public static class Scopes
 {
     public const string LancamentosWrite = "lancamentos.write";
+    public const string LancamentosRead = "lancamentos.read";
     public const string ConsolidadoRead = "consolidado.read";
 
-    public static readonly string[] Todos = { LancamentosWrite, ConsolidadoRead };
+    public static readonly string[] Todos = { LancamentosWrite, LancamentosRead, ConsolidadoRead };
 }
