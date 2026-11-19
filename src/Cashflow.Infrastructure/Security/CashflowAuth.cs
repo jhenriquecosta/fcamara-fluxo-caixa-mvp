@@ -3,8 +3,8 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Serilog;
 
 namespace Cashflow.Infrastructure.Security;
 
@@ -15,43 +15,33 @@ namespace Cashflow.Infrastructure.Security;
 /// </summary>
 public static class CashflowAuth
 {
-    /// <summary>Registra o JWT Bearer e as políticas de escopo. Falhas de autenticação e autorização vão ao log como aviso.</summary>
+    /// <summary>
+    /// Registra o JWT Bearer com a estratégia que a configuração pedir (ADR-0012): JWKS do emissor
+    /// quando <c>Auth:Authority</c> existe, chave simétrica local quando não. As políticas de escopo
+    /// são as mesmas nas duas.
+    /// </summary>
     public static IServiceCollection AddCashflowAuth(this IServiceCollection services, IConfiguration configuration)
     {
-        var signingKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(configuration["Auth:SigningKey"]
-                ?? throw new InvalidOperationException("Auth:SigningKey não configurada")));
-
         services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(options =>
-            {
-                options.MapInboundClaims = false;
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidIssuer = configuration["Auth:Issuer"],
-                    ValidAudience = configuration["Auth:Audience"],
-                    IssuerSigningKey = signingKey,
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
-                    ValidateLifetime = true,
-                    ValidateIssuerSigningKey = true,
-                    ClockSkew = TimeSpan.Zero
-                };
-                options.Events = new JwtBearerEvents
-                {
-                    OnAuthenticationFailed = context =>
-                    {
-                        Log.Warning("autenticação falhou: {Reason}", context.Exception.Message);
-                        return Task.CompletedTask;
-                    },
-                    OnForbidden = context =>
-                    {
-                        Log.Warning("autorização negada para {Path}", context.Request.Path);
-                        return Task.CompletedTask;
-                    }
-                };
-            });
+            .AddJwtBearer();
+
+        var authority = configuration["Auth:Authority"];
+        if (!string.IsNullOrWhiteSpace(authority))
+        {
+            // O alvo: metadados OIDC e JWKS do emissor (Cognito). A chave simétrica não participa.
+            services.AddSingleton<IConfigureOptions<JwtBearerOptions>>(
+                new OidcAuthorityStrategy(authority, configuration["Auth:Audience"]));
+        }
+        else
+        {
+            var signingKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(configuration["Auth:SigningKey"]
+                    ?? throw new InvalidOperationException("Auth:SigningKey não configurada")));
+            services.AddSingleton<IConfigureOptions<JwtBearerOptions>>(
+                new ChaveDeDesenvolvimentoStrategy(
+                    signingKey, configuration["Auth:Issuer"], configuration["Auth:Audience"]));
+        }
 
         services.AddAuthorization(options =>
         {
