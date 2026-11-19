@@ -2,7 +2,7 @@
 
 tipo: docs
 branch: docs/0012-avaliacao-de-padroes
-publicacao: pendente
+publicacao: https://github.com/jhenriquecosta/fcamara-fluxo-caixa-mvp/pull/31
 estado: concluído
 responsavel: jhenriquecosta@hotmail.com
 next_skill: 
