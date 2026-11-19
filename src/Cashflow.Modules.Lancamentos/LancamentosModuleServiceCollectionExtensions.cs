@@ -9,8 +9,16 @@ using Npgsql;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
+/// <summary>
+/// A porta de entrada do módulo para os hosts: o host liga o módulo com uma linha e não conhece nada
+/// do que está dentro dele.
+/// </summary>
 public static class LancamentosModuleServiceCollectionExtensions
 {
+    /// <summary>
+    /// O que a API precisa: o banco do módulo, os repositórios, as métricas e os casos de uso
+    /// (handlers já decorados). Não sobe trabalho de fundo.
+    /// </summary>
     public static IServiceCollection AddLancamentosModule(
         this IServiceCollection services, Action<LancamentosModuleOptions> configureOptions)
     {
@@ -40,6 +48,7 @@ public static class LancamentosModuleServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>Aplica o <c>Schema.sql</c> do módulo. Chamado pelo Migrator e pelas fixtures de teste.</summary>
     public static Task MigrateLancamentosDbAsync(this NpgsqlDataSource dataSource, CancellationToken ct = default) =>
         SqlSchema.ApplyAsync(dataSource, Assembly.GetExecutingAssembly(),
             "Cashflow.Modules.Lancamentos.Repositories.Schema.sql", ct);

@@ -17,9 +17,11 @@ public sealed class WebApiFactory(
     bool consolidado = true,
     DateTimeOffset? agora = null) : WebApplicationFactory<WebApiEntryPoint>
 {
+    /// <summary>O WebAPI como <c>lancamentos-api</c>, com o relógio opcionalmente fixo em <paramref name="agora"/>.</summary>
     public static WebApiFactory SoLancamentos(string connectionString, DateTimeOffset? agora = null) =>
         new(connectionString, lancamentos: true, consolidado: false, agora);
 
+    /// <summary>O WebAPI como <c>consolidado-api</c>.</summary>
     public static WebApiFactory SoConsolidado(string connectionString) =>
         new(connectionString, lancamentos: false, consolidado: true);
 

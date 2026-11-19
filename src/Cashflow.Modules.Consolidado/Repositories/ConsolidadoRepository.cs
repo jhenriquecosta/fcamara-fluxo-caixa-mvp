@@ -4,13 +4,16 @@ using Dapper;
 
 namespace Cashflow.Modules.Consolidado.Repositories;
 
+/// <summary>A projeção em SQL (Dapper, ADR-0006). A idempotência e a soma ficam no banco, numa transação.</summary>
 public sealed class ConsolidadoRepository(ConsolidadoDbContext dbContext) : IConsolidadoRepository
 {
     private sealed record ConsolidadoRow(decimal SaldoDia, decimal SaldoAcumulado);
 
+    /// <inheritdoc />
     public IUnitOfWork UnitOfWork => dbContext;
 
-    public async Task<ConsolidadoDiario?> GetAsync(Guid comercianteId, DateOnly data, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public async Task<ConsolidadoDiario?> ObterDoDiaAsync(Guid comercianteId, DateOnly data, CancellationToken cancellationToken = default)
     {
         var conn = await dbContext.GetConnectionAsync(cancellationToken);
         var linha = await conn.QuerySingleOrDefaultAsync<ConsolidadoRow>(new CommandDefinition("""
@@ -22,7 +25,8 @@ public sealed class ConsolidadoRepository(ConsolidadoDbContext dbContext) : ICon
         return linha is null ? null : new ConsolidadoDiario(comercianteId, data, linha.SaldoDia, linha.SaldoAcumulado);
     }
 
-    public async Task<decimal> SaldoAnteriorAsync(Guid comercianteId, DateOnly data, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public async Task<decimal> SaldoDeAberturaAsync(Guid comercianteId, DateOnly data, CancellationToken cancellationToken = default)
     {
         var conn = await dbContext.GetConnectionAsync(cancellationToken);
         return await conn.ExecuteScalarAsync<decimal?>(new CommandDefinition("""
@@ -32,31 +36,37 @@ public sealed class ConsolidadoRepository(ConsolidadoDbContext dbContext) : ICon
             """, new { comercianteId, data }, dbContext.CurrentTransaction, cancellationToken: cancellationToken)) ?? 0m;
     }
 
-    public async Task<ProjecaoResultado> AplicarAsync(MovimentoDoDia movimento, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    /// <remarks>
+    /// Dois comandos na transação do chamador: o <c>INSERT ... ON CONFLICT DO NOTHING</c> em
+    /// <c>evento_processado</c> é a deduplicação (inseriu zero linhas, o evento é repetido); depois, o
+    /// upsert soma o movimento no dia, abrindo o dia com o acumulado do último anterior quando ele é novo.
+    /// </remarks>
+    public async Task<ResultadoDaProjecao> ProjetarAsync(MovimentoDoDia movimento, CancellationToken cancellationToken = default)
     {
         var conn = await dbContext.GetConnectionAsync(cancellationToken);
 
-        var inserido = await conn.ExecuteAsync(new CommandDefinition("""
+        var eventoNovo = await conn.ExecuteAsync(new CommandDefinition("""
             INSERT INTO evento_processado (event_id, processado_em)
             VALUES (@EventId, now())
             ON CONFLICT (event_id) DO NOTHING
             """, new { movimento.EventId }, dbContext.CurrentTransaction, cancellationToken: cancellationToken));
 
-        if (inserido == 0)
-            return ProjecaoResultado.Duplicado;
+        if (eventoNovo == 0)
+            return ResultadoDaProjecao.EventoJaProcessado;
 
         await conn.ExecuteAsync(new CommandDefinition("""
             INSERT INTO consolidado_diario (comerciante_id, data, saldo_dia, saldo_acumulado)
-            VALUES (@ComercianteId, @Data, @Delta,
+            VALUES (@ComercianteId, @Data, @Efeito,
                     COALESCE((SELECT saldo_acumulado FROM consolidado_diario
                               WHERE comerciante_id = @ComercianteId AND data < @Data
-                              ORDER BY data DESC LIMIT 1), 0) + @Delta)
+                              ORDER BY data DESC LIMIT 1), 0) + @Efeito)
             ON CONFLICT (comerciante_id, data) DO UPDATE
             SET saldo_dia = consolidado_diario.saldo_dia + EXCLUDED.saldo_dia,
                 saldo_acumulado = consolidado_diario.saldo_acumulado + EXCLUDED.saldo_dia
-            """, new { movimento.ComercianteId, movimento.Data, movimento.Delta },
+            """, new { movimento.ComercianteId, movimento.Data, Efeito = movimento.EfeitoNoSaldo },
             dbContext.CurrentTransaction, cancellationToken: cancellationToken));
 
-        return ProjecaoResultado.Aplicado;
+        return ResultadoDaProjecao.Somado;
     }
 }

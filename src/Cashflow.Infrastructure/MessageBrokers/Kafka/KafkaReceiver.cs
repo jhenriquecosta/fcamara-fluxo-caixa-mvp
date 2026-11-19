@@ -6,29 +6,36 @@ using Microsoft.Extensions.Logging;
 namespace Cashflow.Infrastructure.MessageBrokers.Kafka;
 
 /// <summary>
-/// Consome com commit manual: cada mensagem tem quatro tentativas (1 s, 2 s, 4 s entre elas) e,
-/// esgotadas, vai para a DLT. O offset só avança depois do processamento ou da DLT — nenhum
-/// evento se perde em silêncio (ADR-0005).
+/// Consome um tópico garantindo que nenhum evento se perca em silêncio (ADR-0005): cada mensagem tem
+/// quatro tentativas (com 1 s, 2 s e 4 s entre elas) e, esgotadas, vai para a DLT. O offset só avança
+/// depois de processar ou de desviar para a DLT.
 /// </summary>
+/// <remarks>
+/// Commit manual e entrega at-least-once: uma queda entre processar e commitar reentrega a mensagem,
+/// e quem consome precisa ser idempotente. O consolidado é, pelo <c>eventId</c>.
+/// </remarks>
 public sealed class KafkaReceiver<TConsumer, T> : IMessageReceiver<TConsumer, T>, IDisposable
 {
-    private static readonly TimeSpan[] Esperas =
+    private static readonly TimeSpan[] WaitBeforeRetry =
     {
         TimeSpan.FromSeconds(1),
         TimeSpan.FromSeconds(2),
         TimeSpan.FromSeconds(4)
     };
 
+    private static readonly TimeSpan BrokerQueryTimeout = TimeSpan.FromSeconds(5);
+
     private readonly IConsumer<string?, string> _consumer;
-    private readonly IProducer<string?, string> _dlt;
-    private readonly string _dltTopic;
+    private readonly IProducer<string?, string> _deadLetterProducer;
+    private readonly string _deadLetterTopic;
     private readonly MessagingMetrics _metrics;
     private readonly ILogger _logger;
 
-    public KafkaReceiver(string bootstrapServers, string topic, string dltTopic, string groupId,
+    /// <summary>Cria o consumidor já assinando <paramref name="topic"/> e o producer da DLT.</summary>
+    public KafkaReceiver(string bootstrapServers, string topic, string deadLetterTopic, string groupId,
         MessagingMetrics metrics, ILogger<KafkaReceiver<TConsumer, T>> logger)
     {
-        _dltTopic = dltTopic;
+        _deadLetterTopic = deadLetterTopic;
         _metrics = metrics;
         _logger = logger;
 
@@ -40,7 +47,7 @@ public sealed class KafkaReceiver<TConsumer, T> : IMessageReceiver<TConsumer, T>
             EnableAutoCommit = false
         }).Build();
 
-        _dlt = new ProducerBuilder<string?, string>(new ProducerConfig
+        _deadLetterProducer = new ProducerBuilder<string?, string>(new ProducerConfig
         {
             BootstrapServers = bootstrapServers,
             Acks = Acks.All
@@ -49,14 +56,18 @@ public sealed class KafkaReceiver<TConsumer, T> : IMessageReceiver<TConsumer, T>
         _consumer.Subscribe(topic);
     }
 
+    /// <summary>
+    /// O laço de consumo, até o cancelamento. Uma mensagem só é commitada quando foi processada ou
+    /// guardada na DLT; se nem a DLT aceitou, o offset fica e a mensagem volta na próxima leitura.
+    /// </summary>
     public async Task ReceiveAsync(Func<T, MetaData, Task> action, CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)
         {
-            ConsumeResult<string?, string> resultado;
+            ConsumeResult<string?, string> consumed;
             try
             {
-                resultado = _consumer.Consume(cancellationToken);
+                consumed = _consumer.Consume(cancellationToken);
             }
             catch (OperationCanceledException)
             {
@@ -68,56 +79,58 @@ public sealed class KafkaReceiver<TConsumer, T> : IMessageReceiver<TConsumer, T>
                 continue;
             }
 
-            if (resultado is null || resultado.IsPartitionEOF)
+            if (consumed is null || consumed.IsPartitionEOF)
                 continue;
 
-            RegistrarLag(resultado);
+            RecordLag(consumed);
 
-            if (await ProcessarComRetentativasAsync(resultado, action, cancellationToken)
-                || await EnviarParaDltAsync(resultado, cancellationToken))
+            if (await TryProcessWithRetriesAsync(consumed, action, cancellationToken)
+                || await TrySendToDeadLetterAsync(consumed, cancellationToken))
             {
-                _consumer.Commit(resultado);
+                _consumer.Commit(consumed);
             }
         }
 
         _consumer.Close();
     }
 
-    private async Task<bool> ProcessarComRetentativasAsync(
-        ConsumeResult<string?, string> resultado, Func<T, MetaData, Task> action, CancellationToken ct)
+    /// <summary>Tenta processar até esgotar <see cref="WaitBeforeRetry"/>. Falso quando a falha persiste.</summary>
+    private async Task<bool> TryProcessWithRetriesAsync(
+        ConsumeResult<string?, string> consumed, Func<T, MetaData, Task> action, CancellationToken ct)
     {
-        for (var tentativa = 0; ; tentativa++)
+        for (var attempt = 0; ; attempt++)
         {
             try
             {
-                var (dados, metaData) = Desembrulhar(resultado.Message.Value);
-                await action(dados, metaData);
+                var (payload, metaData) = OpenEnvelope(consumed.Message.Value);
+                await action(payload, metaData);
                 return true;
             }
-            catch (Exception ex) when (tentativa < Esperas.Length && !ct.IsCancellationRequested)
+            catch (Exception ex) when (attempt < WaitBeforeRetry.Length && !ct.IsCancellationRequested)
             {
                 _logger.LogWarning(ex, "tentativa {Tentativa} de {Total} falhou; tentando de novo",
-                    tentativa + 1, Esperas.Length + 1);
-                await Task.Delay(Esperas[tentativa], ct);
+                    attempt + 1, WaitBeforeRetry.Length + 1);
+                await Task.Delay(WaitBeforeRetry[attempt], ct);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "falha persistente; enviando o evento para a DLT {DltTopic}", _dltTopic);
+                _logger.LogError(ex, "falha persistente; enviando o evento para a DLT {DltTopic}", _deadLetterTopic);
                 return false;
             }
         }
     }
 
-    private async Task<bool> EnviarParaDltAsync(ConsumeResult<string?, string> resultado, CancellationToken ct)
+    /// <summary>Copia a mensagem original, com a mesma chave, para a DLT. Falso se a DLT recusou.</summary>
+    private async Task<bool> TrySendToDeadLetterAsync(ConsumeResult<string?, string> consumed, CancellationToken ct)
     {
         try
         {
-            await _dlt.ProduceAsync(_dltTopic, new Message<string?, string>
+            await _deadLetterProducer.ProduceAsync(_deadLetterTopic, new Message<string?, string>
             {
-                Key = resultado.Message.Key,
-                Value = resultado.Message.Value
+                Key = consumed.Message.Key,
+                Value = consumed.Message.Value
             }, ct);
-            _metrics.Dlt();
+            _metrics.CountDeadLetter();
             return true;
         }
         catch (Exception ex)
@@ -127,7 +140,8 @@ public sealed class KafkaReceiver<TConsumer, T> : IMessageReceiver<TConsumer, T>
         }
     }
 
-    private static (T Dados, MetaData MetaData) Desembrulhar(string json)
+    /// <summary>Tira o payload e os metadados do envelope <see cref="CashflowEvent{T}"/>. Mensagem malformada lança.</summary>
+    private static (T Payload, MetaData MetaData) OpenEnvelope(string json)
     {
         var envelope = CashflowEventSerializer.Deserialize<T>(json)
                        ?? throw new InvalidOperationException("mensagem vazia no tópico");
@@ -141,25 +155,30 @@ public sealed class KafkaReceiver<TConsumer, T> : IMessageReceiver<TConsumer, T>
         });
     }
 
-    private void RegistrarLag(ConsumeResult<string?, string> resultado)
+    /// <summary>
+    /// Mede quanto falta consumir na partição (último offset menos o commitado). A métrica é observação:
+    /// se o broker não responder, o consumo segue sem ela.
+    /// </summary>
+    private void RecordLag(ConsumeResult<string?, string> consumed)
     {
         try
         {
-            var watermark = _consumer.QueryWatermarkOffsets(resultado.TopicPartition, TimeSpan.FromSeconds(5));
-            var commitado = _consumer.Committed(new[] { resultado.TopicPartition }, TimeSpan.FromSeconds(5))
+            var watermark = _consumer.QueryWatermarkOffsets(consumed.TopicPartition, BrokerQueryTimeout);
+            var committed = _consumer.Committed(new[] { consumed.TopicPartition }, BrokerQueryTimeout)
                 .FirstOrDefault();
-            var lag = watermark.High.Value - (commitado?.Offset.Value ?? watermark.Low.Value);
-            _metrics.Lag(Math.Max(0, lag));
+            var lag = watermark.High.Value - (committed?.Offset.Value ?? watermark.Low.Value);
+            _metrics.RecordConsumerLag(Math.Max(0, lag));
         }
         catch (KafkaException)
         {
-            // a métrica é observação; sem ela o consumo continua
+            // sem a métrica o consumo continua
         }
     }
 
+    /// <summary>Libera o consumidor e o producer da DLT.</summary>
     public void Dispose()
     {
         _consumer.Dispose();
-        _dlt.Dispose();
+        _deadLetterProducer.Dispose();
     }
 }
