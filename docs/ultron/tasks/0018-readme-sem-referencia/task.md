@@ -2,7 +2,7 @@
 
 tipo: chore
 branch: chore/0018-readme-sem-referencia
-publicacao: pendente
+publicacao: https://github.com/jhenriquecosta/fcamara-fluxo-caixa-mvp/pull/48
 estado: concluído
 worktree: .claude/worktrees/chore-0018-readme-sem-referencia
 responsavel: jhenriquecosta@hotmail.com
