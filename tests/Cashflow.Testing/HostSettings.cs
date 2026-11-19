@@ -7,6 +7,7 @@ namespace Cashflow.Testing;
 /// </summary>
 internal static class HostSettings
 {
+    /// <summary>Escreve a autenticação dos testes, o nível de log e os <paramref name="valores"/> nas variáveis de ambiente.</summary>
     public static void Aplicar(IReadOnlyDictionary<string, string?> valores)
     {
         Environment.SetEnvironmentVariable("Auth__Issuer", TestTokens.Issuer);
@@ -18,6 +19,7 @@ internal static class HostSettings
             Environment.SetEnvironmentVariable(chave, valor);
     }
 
+    /// <summary>Liga ou desliga cada módulo, todos apontando para o banco do teste.</summary>
     public static Dictionary<string, string?> Modulos(string connectionString, bool lancamentos, bool consolidado) => new()
     {
         ["Modules__Lancamentos__Enabled"] = lancamentos.ToString(),

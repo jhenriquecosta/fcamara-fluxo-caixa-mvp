@@ -4,9 +4,13 @@ using Npgsql;
 
 namespace Cashflow.Infrastructure.Persistence;
 
-/// <summary>Aplica o script de esquema embutido no assembly do módulo (o papel do DbUp na referência).</summary>
+/// <summary>Aplica o script de esquema que o módulo embute no próprio assembly (o papel do DbUp na referência).</summary>
 public static class SqlSchema
 {
+    /// <summary>
+    /// Executa o script inteiro numa conexão. Os scripts são idempotentes (<c>IF NOT EXISTS</c>), então
+    /// rodar de novo num banco já migrado não muda nada.
+    /// </summary>
     public static async Task ApplyAsync(
         NpgsqlDataSource dataSource, Assembly assembly, string resourceName, CancellationToken ct = default)
     {

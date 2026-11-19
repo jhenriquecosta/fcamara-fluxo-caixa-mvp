@@ -10,6 +10,7 @@ public sealed class PostgresFixture : IAsyncLifetime
 {
     private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:17-alpine").Build();
 
+    /// <summary>O banco do container. Os dois módulos usam o mesmo nos testes; em produção cada um tem o seu.</summary>
     public string ConnectionString => _container.GetConnectionString();
 
     public async ValueTask InitializeAsync()

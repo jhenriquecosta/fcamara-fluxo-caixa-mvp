@@ -7,12 +7,13 @@ using Cashflow.Modules.Consolidado.Entities;
 namespace Cashflow.Modules.Consolidado.MessageBusConsumers;
 
 /// <summary>
-/// Recebe o evento de lançamento do barramento e o converte no comando de projeção. O
-/// <c>MessageId</c> é o <c>eventId</c> do envelope: é ele que torna a projeção idempotente.
+/// A entrada do consolidado no barramento: converte o evento de lançamento no comando de projeção e o
+/// despacha. O <c>MessageId</c> é o <c>eventId</c> do envelope, e é ele que torna a projeção idempotente.
 /// </summary>
 public sealed class LancamentoEventConsumer(Dispatcher dispatcher)
     : IMessageBusConsumer<LancamentoEventConsumer, LancamentoEventPayload>
 {
+    /// <inheritdoc />
     public Task HandleAsync(LancamentoEventPayload data, MetaData metaData, CancellationToken cancellationToken = default) =>
         dispatcher.DispatchAsync(new ProjetarMovimentoCommand
         {

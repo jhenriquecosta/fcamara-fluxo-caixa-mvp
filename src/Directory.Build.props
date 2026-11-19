@@ -1,0 +1,10 @@
+<Project>
+  <!--
+    O código é a documentação: todo tipo e membro público de src/ precisa dizer o que é e por que existe.
+    O compilador cobra (CS1591 vira erro), então a regra não depende de lembrar.
+  -->
+  <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <WarningsAsErrors>$(WarningsAsErrors);CS1591;CS1572;CS1573;CS1574</WarningsAsErrors>
+  </PropertyGroup>
+</Project>

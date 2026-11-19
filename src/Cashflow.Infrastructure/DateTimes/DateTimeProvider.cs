@@ -2,14 +2,12 @@ using Cashflow.CrossCuttingConcerns.DateTimes;
 
 namespace Cashflow.Infrastructure.DateTimes;
 
-/// <summary>Sobre o <see cref="TimeProvider"/> do .NET: os testes trocam o relógio sem tocar no domínio.</summary>
+/// <summary>
+/// O <see cref="IDateTimeProvider"/> sobre o <see cref="TimeProvider"/> do .NET. Os testes trocam o
+/// <see cref="TimeProvider"/> registrado por um relógio fixo, sem tocar no domínio.
+/// </summary>
 public sealed class DateTimeProvider(TimeProvider timeProvider) : IDateTimeProvider
 {
-    public DateTime Now => timeProvider.GetLocalNow().DateTime;
-
-    public DateTime UtcNow => timeProvider.GetUtcNow().UtcDateTime;
-
-    public DateTimeOffset OffsetNow => timeProvider.GetLocalNow();
-
+    /// <inheritdoc />
     public DateTimeOffset OffsetUtcNow => timeProvider.GetUtcNow();
 }
