@@ -14,7 +14,7 @@ Workflow de CI que roda build (dotnet build Cashflow.slnx) e a suíte completa (
 
 - [x] `.github/workflows/ci.yml` roda em PR e push contra `develop` e `main`: restore, build Release, `dotnet format --verify-no-changes` e `dotnet test --solution Cashflow.slnx`.
 - [x] Os mesmos comandos, rodados localmente em Release, dão verde: build 0 aviso/0 erro, format sem mudança, suíte 57/57.
-- [ ] O workflow roda verde no próprio PR desta task (conferido no PR, antes do merge).
+- [x] O workflow roda verde no próprio PR desta task: run 44537942095, 57/57 em 1m30s.
 
 ## Exceções registradas
 
