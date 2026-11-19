@@ -103,6 +103,7 @@ A convenção de logs e as métricas estão em [`docs/ultron/agents/logging.md`]
 - **Estimativa de custos:** [`docs/arquitetura/custos.md`](docs/arquitetura/custos.md)
 - **Observabilidade:** [`docs/arquitetura/observabilidade.md`](docs/arquitetura/observabilidade.md)
 - **Segurança para consumo dos serviços:** [`docs/arquitetura/seguranca-integracao.md`](docs/arquitetura/seguranca-integracao.md)
+- **Avaliação de padrões (Options e Strategy) e dívida técnica:** [`docs/arquitetura/avaliacao-de-padroes.md`](docs/arquitetura/avaliacao-de-padroes.md)
 
 ## Estrutura
 
