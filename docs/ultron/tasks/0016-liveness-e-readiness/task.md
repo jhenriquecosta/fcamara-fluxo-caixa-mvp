@@ -2,7 +2,7 @@
 
 tipo: chore
 branch: chore/0016-liveness-e-readiness
-publicacao: pendente
+publicacao: https://github.com/jhenriquecosta/fcamara-fluxo-caixa-mvp/pull/45
 estado: concluído
 worktree: .claude/worktrees/chore-0016-liveness-e-readiness
 responsavel: jhenriquecosta@hotmail.com
