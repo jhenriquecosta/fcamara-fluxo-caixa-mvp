@@ -5,7 +5,7 @@ branch: feature/0008-frontend-blazor
 estado: em andamento
 worktree: .claude/worktrees/feature-0008-frontend-blazor
 responsavel: jhenriquecosta@hotmail.com
-next_skill: ultron-discover
+next_skill: ultron-coder
 issue: #24
 
 ## Contexto
@@ -30,3 +30,12 @@ Diferencial da entrega (plus para a banca): uma interface web limpa em Blazor Se
 - [ ] Consolidado do dia exibido com saldo do dia, anterior e acumulado
 - [ ] O token de acesso nunca chega ao navegador (Blazor Server como BFF)
 - [ ] Suíte verde (unitários + integração)
+
+## Fases
+
+- [x] descoberta — `descoberta.md` (10 gaps, decisão autônoma por gap)
+- [x] research — `research.md` (Research #0002)
+- [x] prd — `prd.md` (PRD-0003) · ADR-0010
+- [x] slices — `slices/README.md` (S1–S3)
+- [ ] coder
+- [ ] verify
