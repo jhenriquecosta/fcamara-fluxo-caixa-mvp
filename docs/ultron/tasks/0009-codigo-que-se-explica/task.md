@@ -18,3 +18,17 @@ O código é a documentação. Hoje há classes e métodos que não dizem o que 
 5. **README.md por projeto:** por que existe, finalidade, padrões e estilo arquitetural, dependências permitidas e proibidas, o que tem dentro.
 
 Nomes congelados (a sessão do front usa): `Scopes`, `CashflowAuth.ComercianteId`, `CashflowProblems.*`, `Dispatcher`, `DiaDeNegocio.De`, `IDateTimeProvider.OffsetUtcNow`, `ILancamentoRepository`, `DbContext.GetConnectionAsync`, `[AuditLog]`, `[DatabaseRetry]`, `IQuery`/`IQueryHandler`, `TestTokens`, `WebApiFactory.SoLancamentos`.
+
+## Critérios de aceitação
+
+- [x] Pastas órfãs apagadas: 10 diretórios das estruturas anteriores (só `bin/`/`obj/`). Fora de `src/` e `tests/`, todo arquivo versionado é referenciado; `.tmp/` é material pessoal do Operador, fora do git, e ficou.
+- [x] Código morto removido: `Specification`, `Money`, `NotFoundException`, `ValidationException`, `IConcurrencyHandler`, `IHasKey`, `UpdatedDateTime`, `IUnitOfWork.SaveChangesAsync`, `IDateTimeProvider.Now/UtcNow/OffsetNow`, `IMessageBus.ReceiveAsync(action)`.
+- [x] Nomes que revelam intenção nos pontos opacos, preservando os nomes congelados da sessão do front.
+- [x] Todo tipo e membro público de `src/` documentado, com CS1591 como erro em `src/Directory.Build.props`.
+- [x] Testes: nome é a regra, Arrange/Act/Assert, critério em `[Trait("Criterio", "ACn")]`; testes com várias regras separados. Suíte 57 → 77, verde.
+- [x] README.md em cada um dos 17 projetos: por que existe, finalidade, padrões e estilo, dependências permitidas e proibidas.
+- [x] Comportamento observável inalterado (os mesmos ACs verdes; o novo teste de estorno de outro comerciante confirma o 404 que já existia).
+
+## Exceções registradas
+
+- **verify do fechamento pulado (`--no-verify`):** ultron-skills#481 (o `-q` do `verify_all.sh` no .NET 10/MTP). Verificado pelos comandos do CI: build sem aviso, `dotnet format --verify-no-changes`, suíte 77/77; o CI do PR verifica de novo.
