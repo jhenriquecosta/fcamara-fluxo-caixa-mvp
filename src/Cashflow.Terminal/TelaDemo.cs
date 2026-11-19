@@ -28,36 +28,65 @@ public sealed class TelaDemo(IAnsiConsole console, Sessao sessao)
         console.WriteLine("Demo ponta a ponta: lançamentos → outbox → Kafka → consolidado → estorno → idempotência.");
         try
         {
-            console.WriteLine($"1/6 Lançando crédito de {Formatacao.Moeda(Credito)}...");
+            console.WriteLine($"1/8 Lançando crédito de {Formatacao.Moeda(Credito)}...");
             var credito = await sessao.Lancamentos.LancarAsync(
                 new NovoLancamentoModel { Tipo = "credito", Valor = Credito, Descricao = "Demo — crédito" },
                 Guid.NewGuid().ToString(), cancellationToken);
             console.WriteLine($"    lançamento {credito.Id} registrado");
 
-            console.WriteLine($"2/6 Lançando débito de {Formatacao.Moeda(Debito)}...");
+            console.WriteLine($"2/8 Lançando débito de {Formatacao.Moeda(Debito)}...");
             var debito = await sessao.Lancamentos.LancarAsync(
                 new NovoLancamentoModel { Tipo = "debito", Valor = Debito, Descricao = "Demo — débito" },
                 Guid.NewGuid().ToString(), cancellationToken);
             console.WriteLine($"    lançamento {debito.Id} registrado");
 
-            console.WriteLine("3/6 Aguardando a projeção do consolidado (outbox → Kafka → consumidor)...");
+            console.WriteLine("3/8 Aguardando a projeção do consolidado (outbox → Kafka → consumidor)...");
             var consolidado = await EsperarConsolidadoAsync(Credito - Debito, cancellationToken);
 
             console.WriteLine(
-                $"4/6 Consolidado do dia: saldo do dia {Formatacao.Moeda(consolidado.SaldoDia)}, " +
+                $"4/8 Consolidado do dia: saldo do dia {Formatacao.Moeda(consolidado.SaldoDia)}, " +
                 $"anterior {Formatacao.Moeda(consolidado.SaldoAnterior)}, " +
                 $"acumulado {Formatacao.Moeda(consolidado.SaldoAcumulado)}");
 
-            console.WriteLine("5/6 Estornando o crédito...");
+            console.WriteLine("5/8 Estornando o crédito...");
             var chave = Guid.NewGuid().ToString();
             var estorno = await sessao.Lancamentos.EstornarAsync(credito.Id, chave, cancellationToken);
             console.WriteLine($"    estorno {estorno.Id} criado");
 
-            console.WriteLine("6/6 Reenviando o estorno com a mesma chave (idempotência)...");
+            console.WriteLine("6/8 Reenviando o estorno com a mesma chave (idempotência)...");
             var repetido = await sessao.Lancamentos.EstornarAsync(credito.Id, chave, cancellationToken);
             console.WriteLine(repetido.Id == estorno.Id
                 ? "    mesma resposta: idempotência confirmada"
                 : "    divergência: a API criou outro lançamento");
+
+            console.WriteLine("7/8 Métricas do que acabou de acontecer (Prometheus)...");
+            try
+            {
+                var sinais = await sessao.Prometheus.ObterSinaisAsync(cancellationToken);
+                var registrados = sinais.LancamentosPorResultado.GetValueOrDefault("registrado");
+                var idempotentes = sinais.LancamentosPorResultado.GetValueOrDefault("idempotente");
+                console.WriteLine(
+                    $"    registrados: {registrados:F0} · idempotentes: {idempotentes:F0} · " +
+                    $"DLT (1h): {sinais.DltUltimaHora:F0}");
+            }
+            catch (Exception ex) when (ex is ApiException or HttpRequestException or TaskCanceledException)
+            {
+                console.WriteLine("    métricas indisponíveis — a demo segue");
+            }
+
+            console.WriteLine("8/8 Logs do que acabou de acontecer (Elasticsearch)...");
+            try
+            {
+                var logs = await sessao.Logs.UltimosAsync(3, "lancamentos", null, cancellationToken);
+                if (logs.Count == 0)
+                    console.WriteLine("    nenhum log ainda — o sink pode estar atrasado");
+                foreach (var entrada in logs)
+                    console.WriteLine($"    {Formatacao.Hora(entrada.Instante)} {entrada.Nivel} {entrada.Servico}: {entrada.Mensagem}");
+            }
+            catch (Exception ex) when (ex is ApiException or HttpRequestException or TaskCanceledException)
+            {
+                console.WriteLine("    logs indisponíveis — a demo segue");
+            }
 
             console.WriteLine("Demo concluída.");
         }

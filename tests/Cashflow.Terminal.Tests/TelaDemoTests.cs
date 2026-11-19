@@ -13,12 +13,29 @@ public sealed class TelaDemoTests
     private static string Criado(string id, string tipo, decimal valor) =>
         $$"""{"id":"{{id}}","comercianteId":"22222222-2222-2222-2222-222222222222","data":"2026-11-19","valor":{{valor.ToString(System.Globalization.CultureInfo.InvariantCulture)}},"tipo":"{{tipo}}","descricao":null,"estornoDe":null}""";
 
+    private static string Vetor(params (string Rotulo, string Valor, string Numero)[] series) =>
+        "{\"status\":\"success\",\"data\":{\"resultType\":\"vector\",\"result\":[" +
+        string.Join(",", series.Select(s =>
+            "{\"metric\":{\"" + s.Rotulo + "\":\"" + s.Valor + "\"},\"value\":[1700000000,\"" + s.Numero + "\"]}")) +
+        "]}}";
+
     private static ApiFalsa Api() => new(request =>
     {
-        if (request.Method == HttpMethod.Get)
+        var caminho = request.RequestUri!.AbsolutePath;
+        if (caminho.Contains("_search"))
             return ApiFalsa.Json(
-                """{"comercianteId":"22222222-2222-2222-2222-222222222222","data":"2026-11-19","saldoDia":1179.50,"saldoAnterior":0,"saldoAcumulado":1179.50}""");
-        return request.RequestUri!.AbsolutePath.EndsWith("/estornos")
+                """{"hits":{"hits":[{"_source":{"@timestamp":"2026-11-19T12:00:00Z","level":"Information","message":"lançamento registrado","fields":{"service":"lancamentos","SourceContext":"Handler"}}}]}}""");
+        if (request.Method == HttpMethod.Get)
+        {
+            if (caminho.Contains("consolidado"))
+                return ApiFalsa.Json(
+                    """{"comercianteId":"22222222-2222-2222-2222-222222222222","data":"2026-11-19","saldoDia":1179.50,"saldoAnterior":0,"saldoAcumulado":1179.50}""");
+            var consulta = Uri.UnescapeDataString(request.RequestUri!.Query);
+            return ApiFalsa.Json(consulta.Contains("cashflow_lancamentos_total")
+                ? Vetor(("resultado", "registrado", "2"), ("resultado", "idempotente", "1"))
+                : Vetor());
+        }
+        return caminho.EndsWith("/estornos")
             ? ApiFalsa.Json(
                 $$"""{"id":"{{EstornoId}}","comercianteId":"22222222-2222-2222-2222-222222222222","data":"2026-11-19","valor":1500,"tipo":"debito","descricao":null,"estornoDe":"{{CreditoId}}"}""",
                 201)
@@ -39,13 +56,18 @@ public sealed class TelaDemoTests
         await new TelaDemo(console, SessaoDeTeste.Para(Perfis.Operador, api))
             .ExecutarAsync(TestContext.Current.CancellationToken);
 
-        var lancamentos = api.Recebidas.Where(r => r.Metodo == HttpMethod.Post && !r.Url.AbsolutePath.EndsWith("/estornos")).ToList();
+        var lancamentos = api.Recebidas
+            .Where(r => r.Metodo == HttpMethod.Post && r.Url.AbsolutePath.Contains("/api/v1/lancamentos")
+                        && !r.Url.AbsolutePath.EndsWith("/estornos"))
+            .ToList();
         Assert.Equal(2, lancamentos.Count);
         var estornos = api.Recebidas.Where(r => r.Url.AbsolutePath.EndsWith("/estornos")).ToList();
         Assert.Equal(2, estornos.Count);
         Assert.Equal(estornos[0].ChaveDeIdempotencia, estornos[1].ChaveDeIdempotencia);
         Assert.Contains("1.179,50", console.Output);
         Assert.Contains("idempotência confirmada", console.Output);
+        Assert.Contains("registrados: 2", console.Output);
+        Assert.Contains("lançamento registrado", console.Output);
     }
 
     [Fact]
