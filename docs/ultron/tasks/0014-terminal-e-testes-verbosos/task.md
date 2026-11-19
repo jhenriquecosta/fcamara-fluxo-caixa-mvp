@@ -2,7 +2,7 @@
 
 tipo: chore
 branch: chore/0014-terminal-e-testes-verbosos
-publicacao: pendente
+publicacao: https://github.com/jhenriquecosta/fcamara-fluxo-caixa-mvp/pull/40
 estado: concluído
 worktree: .claude/worktrees/chore-0014-terminal-e-testes-verbosos
 responsavel: jhenriquecosta@hotmail.com
