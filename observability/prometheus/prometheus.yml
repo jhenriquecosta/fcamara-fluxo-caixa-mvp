@@ -9,16 +9,23 @@ scrape_configs:
   - job_name: lancamentos
     metrics_path: /metrics
     static_configs:
-      - targets: ["lancamentos:8080"]
+      - targets: ["lancamentos-api:8080"]
         labels:
           service: lancamentos
 
   - job_name: consolidado
     metrics_path: /metrics
     static_configs:
-      - targets: ["consolidado:8080"]
+      - targets: ["consolidado-api:8080"]
         labels:
           service: consolidado
+
+  - job_name: background-server
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["background-server:8080"]
+        labels:
+          service: background-server
 
   - job_name: prometheus
     static_configs:

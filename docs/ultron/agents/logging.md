@@ -11,7 +11,7 @@
 JSON Lines — o Serilog escreve o **Compact JSON** (`@t`, `@l`, `@mt`) e os enrichers acrescentam `service`/`env` e a correlação. O mesmo arquivo alimenta o Elasticsearch (local) e o CloudWatch Logs (alvo): nada é reescrito para trocar de destino. O sink do Elasticsearch acrescenta o `@timestamp`, que o Kibana usa como campo de tempo.
 
 ```json
-{"@t":"2026-11-18T21:26:14.554Z","@l":"Information","@mt":"lançamento registrado {LancamentoId} {ComercianteHash} {Tipo} {Valor} {EventId}","SourceContext":"Cashflow.Lancamentos.Api.Application.LancamentoService","service":"lancamentos","env":"Development","request_id":"a1b2c3","correlation_id":"4bf92f3577b34da6","trace_id":"4bf92f3577b34da6","LancamentoId":"...","ComercianteHash":"...","Tipo":"debito","Valor":100.00,"EventId":"..."}
+{"@t":"2026-11-18T21:26:14.554Z","@l":"Information","@mt":"lançamento registrado {LancamentoId} {ComercianteHash} {Tipo} {Valor}","SourceContext":"Cashflow.Modules.Lancamentos.Commands.RegistrarLancamentoCommandHandler","service":"lancamentos","env":"Development","request_id":"a1b2c3","correlation_id":"4bf92f3577b34da6","trace_id":"4bf92f3577b34da6","LancamentoId":"...","ComercianteHash":"...","Tipo":"debito","Valor":100.00}
 ```
 
 ## Campos
