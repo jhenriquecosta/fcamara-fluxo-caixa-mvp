@@ -5,7 +5,7 @@ branch: feature/0011-experiencia-de-demonstracao
 estado: em andamento
 worktree: .claude/worktrees/feature-0011-experiencia-de-demonstracao
 responsavel: jhenriquecosta@hotmail.com
-next_skill: ultron-discover
+next_skill: ultron-coder
 issue: #27
 
 ## Contexto
@@ -27,3 +27,12 @@ Diferencial para a banca: uma experiência que prova que **toda** a infraestrutu
 - [ ] A UI de terminal faz lançar, estornar, consultar consolidado, ver métricas e logs
 - [ ] Um serviço fora do ar aparece como fora, sem derrubar o painel nem o terminal
 - [ ] Suíte verde
+
+## Fases
+
+- [x] descoberta — `descoberta.md`
+- [x] research — `research.md` (Research #0003, stack local)
+- [x] prd — `prd.md` (PRD-0004) · ADR-0011
+- [x] slices — `slices/README.md` (S1–S3)
+- [ ] coder
+- [ ] verify
