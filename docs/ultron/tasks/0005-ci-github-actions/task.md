@@ -2,7 +2,7 @@
 
 tipo: chore
 branch: chore/0005-ci-github-actions
-publicacao: pendente
+publicacao: https://github.com/jhenriquecosta/fcamara-fluxo-caixa-mvp/pull/18
 estado: concluído
 responsavel: jhenriquecosta@hotmail.com
 next_skill: 
