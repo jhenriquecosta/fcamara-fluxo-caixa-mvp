@@ -37,7 +37,9 @@ public sealed class PontaAPontaTests(PostgresFixture db)
         Assert.Equal(repetida.Id, reenvio.Id);
         var lista = await lancamentos.ListarAsync(venda.Data, ct);
         Assert.Contains(lista, l => l.Id == venda.Id && l.PodeEstornar);
-        Assert.Equal(2, lista.Count);
+        // O comerciante de teste é compartilhado entre os testes da assembly (mesmo dia, mesmo
+        // banco): conta-se só o que este teste criou, nunca o total do dia.
+        Assert.Equal(2, lista.Count(l => l.Id == venda.Id || l.Id == repetida.Id));
 
         var estorno = await lancamentos.EstornarAsync(venda.Id, Guid.NewGuid().ToString(), ct);
 
