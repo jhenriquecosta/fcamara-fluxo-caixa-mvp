@@ -1,5 +1,6 @@
 using Cashflow.Domain.Repositories;
 using Cashflow.Modules.Lancamentos.Entities;
+using Cashflow.Modules.Lancamentos.Models;
 
 namespace Cashflow.Modules.Lancamentos.Repositories;
 
@@ -11,4 +12,8 @@ public interface ILancamentoRepository : IRepository<Lancamento, Guid>
 
     /// <summary>Diz se o lançamento já tem estorno. É a checagem da regra "estorna uma vez só".</summary>
     Task<bool> ExisteEstornoDeAsync(Guid lancamentoId, CancellationToken cancellationToken = default);
+
+    /// <summary>Os lançamentos do comerciante no dia, em ordem de criação, marcando os que já têm estorno.</summary>
+    Task<IReadOnlyList<LancamentoDoDiaModel>> ListarDoDiaAsync(
+        Guid comercianteId, DateOnly data, CancellationToken cancellationToken = default);
 }

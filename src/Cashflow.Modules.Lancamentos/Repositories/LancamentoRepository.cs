@@ -1,5 +1,6 @@
 using Cashflow.Domain.Repositories;
 using Cashflow.Modules.Lancamentos.Entities;
+using Cashflow.Modules.Lancamentos.Models;
 using Dapper;
 
 namespace Cashflow.Modules.Lancamentos.Repositories;
@@ -62,6 +63,30 @@ public sealed class LancamentoRepository(LancamentosDbContext dbContext) : ILanc
             "SELECT EXISTS (SELECT 1 FROM lancamento WHERE estorno_de = @lancamentoId)",
             new { lancamentoId }, dbContext.CurrentTransaction, cancellationToken: cancellationToken));
     }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<LancamentoDoDiaModel>> ListarDoDiaAsync(
+        Guid comercianteId, DateOnly data, CancellationToken cancellationToken = default)
+    {
+        var conn = await dbContext.GetConnectionAsync(cancellationToken);
+        var rows = await conn.QueryAsync<LancamentoDoDiaRow>(new CommandDefinition("""
+            SELECT l.id AS Id, l.data AS Data, l.valor AS Valor, l.tipo AS Tipo, l.descricao AS Descricao,
+                   l.estorno_de AS EstornoDe, (e.id IS NOT NULL) AS Estornado, l.criado_em AS CriadoEm
+            FROM lancamento l
+            LEFT JOIN lancamento e ON e.estorno_de = l.id
+            WHERE l.comerciante_id = @comercianteId AND l.data = @data
+            ORDER BY l.criado_em, l.id
+            """, new { comercianteId, data }, dbContext.CurrentTransaction, cancellationToken: cancellationToken));
+
+        return rows
+            .Select(r => new LancamentoDoDiaModel(r.Id, r.Data, r.Valor, r.Tipo, r.Descricao, r.EstornoDe,
+                r.Estornado, new DateTimeOffset(DateTime.SpecifyKind(r.CriadoEm, DateTimeKind.Utc))))
+            .ToList();
+    }
+
+    private sealed record LancamentoDoDiaRow(
+        Guid Id, DateOnly Data, decimal Valor, string Tipo, string? Descricao,
+        Guid? EstornoDe, bool Estornado, DateTime CriadoEm);
 
     private async Task<Lancamento?> QuerySingleAsync(string sql, object param, CancellationToken cancellationToken)
     {

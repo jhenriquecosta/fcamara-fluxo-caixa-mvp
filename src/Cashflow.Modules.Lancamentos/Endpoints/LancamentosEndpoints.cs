@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json;
 using Cashflow.Application;
@@ -7,6 +8,7 @@ using Cashflow.Modules.Lancamentos.Commands;
 using Cashflow.Modules.Lancamentos.Entities;
 using Cashflow.Modules.Lancamentos.Models;
 using Cashflow.Modules.Lancamentos.Observability;
+using Cashflow.Modules.Lancamentos.Queries;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -24,7 +26,26 @@ public static class LancamentosEndpoints
     {
         app.MapPost("/api/v1/lancamentos", RegistrarAsync).RequireAuthorization(Scopes.LancamentosWrite);
         app.MapPost("/api/v1/lancamentos/{id:guid}/estornos", EstornarAsync).RequireAuthorization(Scopes.LancamentosWrite);
+        app.MapGet("/api/v1/lancamentos", ListarAsync).RequireAuthorization(Scopes.LancamentosRead);
         return app;
+    }
+
+    private static async Task<IResult> ListarAsync(
+        string? data, ClaimsPrincipal user, Dispatcher dispatcher, CancellationToken ct)
+    {
+        DateOnly? dia = null;
+        if (data is not null)
+        {
+            if (!DateOnly.TryParseExact(data, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+                return CashflowProblems.DataInvalida();
+            dia = parsed;
+        }
+
+        if (CashflowAuth.ComercianteId(user) is not { } comercianteId)
+            return CashflowProblems.TokenSemComerciante();
+
+        return Results.Ok(await dispatcher.DispatchAsync(
+            new ListarLancamentosDoDiaQuery { ComercianteId = comercianteId, Data = dia }, ct));
     }
 
     private static async Task<IResult> RegistrarAsync(

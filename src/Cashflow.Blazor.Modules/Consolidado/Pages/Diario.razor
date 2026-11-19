@@ -1,0 +1,48 @@
+@page "/consolidado"
+@attribute [Authorize(Policy = Policies.PodeConsultar)]
+@inherits PaginaBase
+@using Cashflow.Blazor.Modules.Core
+
+<PageTitle>Consolidado · Fluxo de Caixa</PageTitle>
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Consolidado diário</p>
+        <h1>@Formatacao.Dia(Dia)</h1>
+    </div>
+    <div class="d-flex gap-2 align-items-end flex-wrap">
+        <div>
+            <label for="dia" class="form-label small mb-1">Dia</label>
+            <input id="dia" type="date" class="form-control" value="@Dia.ToString("yyyy-MM-dd")" @onchange="TrocarDiaAsync" />
+        </div>
+        <button type="button" class="btn btn-outline-secondary" disabled="@Ocupado" @onclick="CarregarAsync">Atualizar</button>
+    </div>
+</div>
+
+<Alerta Mensagem="@Erro" />
+
+@if (Consolidado is not null)
+{
+    <div class="saldo-grid">
+        <div class="saldo-card">
+            <span class="saldo-label">Saldo do dia</span>
+            <span class="saldo-valor @(Consolidado.SaldoDia < 0 ? "negativo" : "")">@Formatacao.Moeda(Consolidado.SaldoDia)</span>
+            <span class="saldo-ajuda">créditos menos débitos do dia</span>
+        </div>
+        <div class="saldo-card">
+            <span class="saldo-label">Saldo anterior</span>
+            <span class="saldo-valor">@Formatacao.Moeda(Consolidado.SaldoAnterior)</span>
+            <span class="saldo-ajuda">acumulado até o dia anterior</span>
+        </div>
+        <div class="saldo-card destaque">
+            <span class="saldo-label">Saldo acumulado</span>
+            <span class="saldo-valor @(Consolidado.SaldoAcumulado < 0 ? "negativo" : "")">@Formatacao.Moeda(Consolidado.SaldoAcumulado)</span>
+            <span class="saldo-ajuda">anterior + dia</span>
+        </div>
+    </div>
+    <p class="nota">Projeção derivada dos eventos de lançamento (eventualmente consistente): um lançamento novo aparece aqui em alguns segundos. Use <em>Atualizar</em>.</p>
+}
+else if (Erro is null)
+{
+    <p class="text-muted">Carregando…</p>
+}

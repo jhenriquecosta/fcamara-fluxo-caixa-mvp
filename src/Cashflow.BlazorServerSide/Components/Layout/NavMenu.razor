@@ -1,0 +1,28 @@
+@inject NavigationManager NavigationManager
+
+<aside class="sidebar">
+    <a class="marca" href="">
+        <span class="marca-icone" aria-hidden="true">≋</span>
+        <span>Fluxo de Caixa</span>
+    </a>
+
+    <nav class="menu" aria-label="Principal">
+        <NavLink class="menu-item" href="" Match="NavLinkMatch.All">Início</NavLink>
+        <NavLink class="menu-item" href="lancamentos" Match="NavLinkMatch.All">Lançamentos</NavLink>
+        <AuthorizeView Policy="@Policies.PodeLancar">
+            <NavLink class="menu-item" href="lancamentos/novo">Novo lançamento</NavLink>
+        </AuthorizeView>
+        <NavLink class="menu-item" href="consolidado">Consolidado</NavLink>
+    </nav>
+
+    <AuthorizeView>
+        <div class="usuario">
+            <div class="usuario-nome">@context.User.FindFirst("name")?.Value</div>
+            <div class="usuario-perfil">@context.User.FindFirst(Perfis.ClaimType)?.Value</div>
+            <form action="logout" method="post">
+                <AntiforgeryToken />
+                <button type="submit" class="btn btn-sm btn-outline-light w-100 mt-2">Sair</button>
+            </form>
+        </div>
+    </AuthorizeView>
+</aside>
