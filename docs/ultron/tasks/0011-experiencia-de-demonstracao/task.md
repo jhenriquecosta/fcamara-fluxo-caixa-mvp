@@ -36,3 +36,7 @@ Diferencial para a banca: uma experiência que prova que **toda** a infraestrutu
 - [x] slices — `slices/README.md` (S1–S3)
 - [x] coder — S1 `cba6e2c`, S2 `be73de8`, S3 `3bd7fd8`
 - [x] verify — 133/133; `./start.sh` do zero e demo contra a stack em 2026-11-19
+
+## Exceções registradas
+
+- **verify pulado no fechamento (`--no-verify`), 2026-11-19.** O `verify_all.sh` roda `dotnet test --no-build -q`; com xunit.v3/Microsoft.Testing.Platform o `-q` é recusado ("Opção desconhecida '--q'", exit 5) — vermelho falso da ferramenta, não do código. Suíte exercida manualmente: `dotnet test --no-build` → 133/133; `./start.sh` do zero (8/8 serviços saudáveis) e `./start.sh demo` contra a stack. Mesmo bug registrado na task 0012; conserto pendente no `ultron-skills`.
