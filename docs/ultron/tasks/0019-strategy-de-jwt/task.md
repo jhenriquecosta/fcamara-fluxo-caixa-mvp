@@ -2,7 +2,7 @@
 
 tipo: refactor
 branch: refactor/0019-strategy-de-jwt
-publicacao: pendente
+publicacao: https://github.com/jhenriquecosta/fcamara-fluxo-caixa-mvp/pull/50
 estado: concluído
 worktree: .claude/worktrees/refactor-0019-strategy-de-jwt
 responsavel: jhenriquecosta@hotmail.com
