@@ -44,3 +44,20 @@ Diferencial da entrega (plus para a banca): uma interface web limpa em Blazor Se
 ## Verificação manual (2026-11-19)
 
 Host rodando local com a API fora do ar, via `curl`: sem sessão → 302 `/login?ReturnUrl=…`; senha errada → 200 sem cookie; `consulta` → 302 `/acesso-negado` em `/lancamentos/novo`; `/lancamentos` mostra "Serviço indisponível" sem derrubar a página. O `docker compose up` **não** foi rodado nesta sessão: o projeto compose `cashflow` é o mesmo da sessão de infra no checkout principal, e subir daqui derrubaria a stack dela. A imagem do `web` foi construída (`docker build`) e o `compose config` valida.
+
+## Verificação no navegador (2026-11-19, após o fechamento)
+
+Stack completa num projeto compose isolado (`docker compose -p cashflow-web`, derrubado com `down -v` ao final, sem tocar no projeto `cashflow` da sessão de infra), percorrida com Playwright. Capturas em `evidencias/`.
+
+| Passo | Resultado |
+|---|---|
+| `/lancamentos` sem sessão | redireciona para `/login?ReturnUrl=%2Flancamentos` |
+| login `operador` | volta para `/lancamentos` |
+| crédito R$ 1.500,00, débito R$ 320,50, crédito R$ 80,00 | registrados; aparecem na lista do dia |
+| estorno do crédito de R$ 1.500,00 | modal explica o contra-lançamento; original riscado como "estornado", débito "estorno de …" criado, nenhum dos dois estornável; movimento −R$ 240,50 |
+| `/consolidado` | saldo do dia −R$ 240,50, anterior R$ 0,00, acumulado −R$ 240,50 — via outbox → Kafka → projeção |
+| logout → login `consulta` | lista visível, sem "Novo lançamento" nem "Estornar"; `/lancamentos/novo` → `/acesso-negado` |
+| login `loja2` | "Nenhum lançamento" — não vê a loja 1 |
+| `consolidado-api` parado | lançamento de R$ 55,00 registrado normalmente; `/consolidado` mostra "serviço indisponível" sem derrubar o circuito |
+
+**Observação não reproduzida:** no primeiro envio do formulário de novo lançamento, o primeiro clique em *Registrar* não teve efeito (nenhum POST à API, nenhum erro no console ou no log); o segundo clique registrou uma vez só (a lista mostrou um único crédito de R$ 1.500,00). Três envios seguintes, inclusive em página recém-carregada, funcionaram ao primeiro clique. Suspeita: corrida do Playwright entre o `fill` e a ligação do circuito interativo; fica registrada para observar na demo.
