@@ -28,7 +28,9 @@ public static class CashflowEndpoints
                     statusCode: StatusCodes.Status503ServiceUnavailable);
         }).AllowAnonymous();
 
-        if (app.Environment.IsDevelopment())
+        // O emissor local só existe com a estratégia de desenvolvimento: um ambiente com Cognito
+        // nunca emite token próprio, mesmo configurado por engano como Development (ADR-0012).
+        if (app.Environment.IsDevelopment() && string.IsNullOrWhiteSpace(app.Configuration["Auth:Authority"]))
         {
             app.MapPost("/dev/token", (DevTokenRequest request, IConfiguration configuration) =>
                     Results.Ok(new
