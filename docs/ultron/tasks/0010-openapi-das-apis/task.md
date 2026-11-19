@@ -2,7 +2,7 @@
 
 tipo: feature
 branch: feature/0010-openapi-das-apis
-estado: adiada
+estado: em andamento
 worktree: .claude/worktrees/feature-0010-openapi-das-apis
 responsavel: jhenriquecosta@hotmail.com
 next_skill: ultron-discover
