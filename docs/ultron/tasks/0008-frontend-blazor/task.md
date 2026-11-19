@@ -2,7 +2,7 @@
 
 tipo: feature
 branch: feature/0008-frontend-blazor
-publicacao: pendente
+publicacao: https://github.com/jhenriquecosta/fcamara-fluxo-caixa-mvp/pull/30
 estado: concluído
 worktree: .claude/worktrees/feature-0008-frontend-blazor
 responsavel: jhenriquecosta@hotmail.com
