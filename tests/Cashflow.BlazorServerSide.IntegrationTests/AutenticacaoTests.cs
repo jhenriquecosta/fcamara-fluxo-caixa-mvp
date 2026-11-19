@@ -16,7 +16,8 @@ public sealed class AutenticacaoTests
     [InlineData("/lancamentos")]
     [InlineData("/lancamentos/novo")]
     [InlineData("/consolidado")]
-    public async Task AC1_rota_protegida_sem_sessao_redireciona_para_login(string rota)
+    [Trait("Criterio", "AC1")]
+    public async Task Rota_protegida_sem_sessao_redireciona_para_o_login(string rota)
     {
         await using var front = Front();
         using var navegador = front.Navegador();
@@ -32,7 +33,8 @@ public sealed class AutenticacaoTests
     [InlineData("operador", "errada")]
     [InlineData("ninguem", FrontendFactory.Senha)]
     [InlineData("", "")]
-    public async Task AC1_credencial_invalida_nao_autentica(string usuario, string senha)
+    [Trait("Criterio", "AC1")]
+    public async Task Credencial_invalida_nao_cria_sessao(string usuario, string senha)
     {
         await using var front = Front();
         using var navegador = front.Navegador();
@@ -47,7 +49,8 @@ public sealed class AutenticacaoTests
     }
 
     [Fact]
-    public async Task AC1_mesma_mensagem_para_usuario_inexistente_e_senha_errada()
+    [Trait("Criterio", "AC1")]
+    public async Task Usuario_inexistente_e_senha_errada_recebem_a_mesma_mensagem()
     {
         await using var front = Front();
         using var navegador = front.Navegador();
@@ -63,7 +66,8 @@ public sealed class AutenticacaoTests
     }
 
     [Fact]
-    public async Task RF1_login_valido_cria_sessao_e_volta_para_o_returnUrl()
+    [Trait("Criterio", "AC1")]
+    public async Task Login_valido_cria_sessao_httponly_e_volta_para_a_pagina_pedida()
     {
         await using var front = Front();
         using var navegador = front.Navegador();
@@ -83,7 +87,8 @@ public sealed class AutenticacaoTests
     [Theory]
     [InlineData("https://evil.example/roubo")]
     [InlineData("//evil.example")]
-    public async Task RF1_returnUrl_externo_volta_para_o_inicio(string returnUrl)
+    [Trait("Criterio", "AC1")]
+    public async Task ReturnUrl_externo_volta_para_o_inicio_em_vez_de_redirecionar_para_fora(string returnUrl)
     {
         await using var front = Front();
         using var navegador = front.Navegador();
@@ -95,7 +100,8 @@ public sealed class AutenticacaoTests
     }
 
     [Fact]
-    public async Task AC2_perfil_consulta_nao_acessa_lancar()
+    [Trait("Criterio", "AC2")]
+    public async Task Perfil_consulta_nao_ve_nem_acessa_o_lancamento()
     {
         await using var front = Front();
         using var navegador = front.Navegador();
@@ -112,7 +118,8 @@ public sealed class AutenticacaoTests
     }
 
     [Fact]
-    public async Task AC2_perfil_operador_acessa_lancar()
+    [Trait("Criterio", "AC2")]
+    public async Task Perfil_operador_acessa_o_formulario_de_lancamento()
     {
         await using var front = Front();
         using var navegador = front.Navegador();
@@ -126,7 +133,8 @@ public sealed class AutenticacaoTests
     }
 
     [Fact]
-    public async Task AC6_o_token_de_acesso_nunca_chega_ao_navegador()
+    [Trait("Criterio", "AC6")]
+    public async Task O_token_de_acesso_nunca_chega_ao_navegador()
     {
         var api = ApiFalsa.Vazia();
         await using var front = Front(api);
@@ -143,7 +151,8 @@ public sealed class AutenticacaoTests
     }
 
     [Fact]
-    public async Task RF3_logout_exige_antiforgery_e_encerra_a_sessao()
+    [Trait("Criterio", "AC1")]
+    public async Task Logout_exige_antiforgery_e_encerra_a_sessao()
     {
         await using var front = Front();
         using var navegador = front.Navegador();

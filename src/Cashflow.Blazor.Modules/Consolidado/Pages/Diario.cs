@@ -5,17 +5,20 @@ using Microsoft.AspNetCore.Components;
 
 namespace Cashflow.Blazor.Modules.Consolidado.Pages;
 
+/// <summary>O consolidado de uma data: saldo do dia, anterior e acumulado.</summary>
 public partial class Diario
 {
     [Inject]
-    public ConsolidadoService ConsolidadoService { get; set; } = default!;
+    private ConsolidadoService ConsolidadoService { get; set; } = default!;
 
     [Inject]
-    public DiaDeNegocio DiaDeNegocio { get; set; } = default!;
+    private DiaDeNegocio DiaDeNegocio { get; set; } = default!;
 
-    protected DateOnly Dia { get; private set; }
+    private DateOnly Dia { get; set; }
 
-    protected ConsolidadoDiarioModel? Consolidado { get; private set; }
+    private ConsolidadoDiarioModel? Consolidado { get; set; }
+
+    /// <inheritdoc />
 
     protected override async Task OnInitializedAsync()
     {
@@ -23,10 +26,10 @@ public partial class Diario
         await CarregarAsync();
     }
 
-    protected async Task CarregarAsync() =>
+    private async Task CarregarAsync() =>
         await ExecutarAsync(async () => Consolidado = await ConsolidadoService.ObterAsync(Dia));
 
-    protected async Task TrocarDiaAsync(ChangeEventArgs e)
+    private async Task TrocarDiaAsync(ChangeEventArgs e)
     {
         if (DateOnly.TryParse(e.Value?.ToString(), out var dia))
         {

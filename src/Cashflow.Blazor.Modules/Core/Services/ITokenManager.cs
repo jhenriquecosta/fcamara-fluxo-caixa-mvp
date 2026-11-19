@@ -6,9 +6,13 @@ namespace Cashflow.Blazor.Modules.Core.Services;
 /// </summary>
 public interface ITokenManager
 {
+    /// <summary>Um token válido por pelo menos mais 30 s; sem sessão, lança <see cref="ApiException"/> 401.</summary>
     Task<TokenModel> GetTokenAsync(CancellationToken cancellationToken = default);
 }
 
+/// <summary>Um access token e quando ele vence.</summary>
+/// <param name="AccessToken">O JWT enviado como Bearer.</param>
+/// <param name="ExpiresAt">O vencimento.</param>
 public sealed record TokenModel(string AccessToken, DateTimeOffset ExpiresAt)
 {
     /// <summary>Vence com folga de 30 s, para não chegar vencido à API.</summary>

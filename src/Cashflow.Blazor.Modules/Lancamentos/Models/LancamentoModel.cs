@@ -5,6 +5,7 @@ public sealed record LancamentoModel(
     Guid Id, DateOnly Data, decimal Valor, string Tipo, string? Descricao,
     Guid? EstornoDe, bool Estornado, DateTimeOffset CriadoEm)
 {
+    /// <summary>Este lançamento anula outro.</summary>
     public bool EhEstorno => EstornoDe is not null;
 
     /// <summary>Um estorno não se estorna e um lançamento só se estorna uma vez (ADR-0004).</summary>

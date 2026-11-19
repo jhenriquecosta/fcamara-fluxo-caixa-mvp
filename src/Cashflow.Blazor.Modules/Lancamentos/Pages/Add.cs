@@ -6,14 +6,15 @@ using Microsoft.AspNetCore.Components;
 
 namespace Cashflow.Blazor.Modules.Lancamentos.Pages;
 
+/// <summary>O formulário de lançamento, com a chave de idempotência por intenção de envio.</summary>
 public partial class Add
 {
     [Inject]
-    public LancamentoService LancamentoService { get; set; } = default!;
+    private LancamentoService LancamentoService { get; set; } = default!;
 
-    protected NovoLancamentoModel Lancamento { get; private set; } = new();
+    private NovoLancamentoModel Lancamento { get; set; } = new();
 
-    protected string? Sucesso { get; set; }
+    private string? Sucesso { get; set; }
 
     /// <summary>
     /// A chave nasce com o formulário. Duplo clique ou falha de rede reenviam a mesma chave e a API
@@ -22,7 +23,7 @@ public partial class Add
     /// </summary>
     private string _idempotencyKey = Guid.NewGuid().ToString();
 
-    protected async Task SalvarAsync()
+    private async Task SalvarAsync()
     {
         Sucesso = null;
         await ExecutarAsync(async () =>

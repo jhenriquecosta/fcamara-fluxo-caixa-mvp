@@ -11,6 +11,7 @@ namespace Cashflow.Blazor.Modules.Core.Services;
 /// </summary>
 public abstract class HttpService(HttpClient httpClient, ITokenManager tokenManager)
 {
+    /// <summary>GET autenticado; a resposta de erro vira <see cref="ApiException"/>.</summary>
     protected async Task<T> GetAsync<T>(string url, CancellationToken cancellationToken = default)
     {
         using var request = await CriarAsync(HttpMethod.Get, url, cancellationToken);

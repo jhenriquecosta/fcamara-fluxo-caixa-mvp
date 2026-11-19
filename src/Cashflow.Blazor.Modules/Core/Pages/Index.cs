@@ -6,22 +6,25 @@ using Microsoft.AspNetCore.Components.Authorization;
 
 namespace Cashflow.Blazor.Modules.Core.Pages;
 
+/// <summary>O início: o consolidado de hoje e os atalhos que o perfil permite.</summary>
 public partial class Index
 {
     [CascadingParameter]
     private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
 
     [Inject]
-    public ConsolidadoService ConsolidadoService { get; set; } = default!;
+    private ConsolidadoService ConsolidadoService { get; set; } = default!;
 
     [Inject]
-    public DiaDeNegocio DiaDeNegocio { get; set; } = default!;
+    private DiaDeNegocio DiaDeNegocio { get; set; } = default!;
 
-    protected DateOnly Hoje { get; private set; }
+    private DateOnly Hoje { get; set; }
 
-    protected string Nome { get; private set; } = string.Empty;
+    private string Nome { get; set; } = string.Empty;
 
-    protected ConsolidadoDiarioModel? Consolidado { get; private set; }
+    private ConsolidadoDiarioModel? Consolidado { get; set; }
+
+    /// <inheritdoc />
 
     protected override async Task OnInitializedAsync()
     {

@@ -4,18 +4,24 @@ using Serilog.Context;
 
 namespace Cashflow.Infrastructure.Web;
 
+/// <summary>O pipeline HTTP comum: log de requisição, correlação e segurança, na mesma ordem em todo host.</summary>
 public static class CashflowWeb
 {
+    /// <summary>Log de cada requisição, contexto de correlação, autenticação e autorização.</summary>
     public static WebApplication UseCashflowWeb(this WebApplication app)
     {
         app.UseSerilogRequestLogging();
-        app.UseCashflowRequestContext();
+        app.UseRequestCorrelation();
         app.UseAuthentication();
         app.UseAuthorization();
         return app;
     }
 
-    private static IApplicationBuilder UseCashflowRequestContext(this IApplicationBuilder app) =>
+    /// <summary>
+    /// Põe <c>request_id</c>, <c>correlation_id</c> e <c>trace_id</c> em todo log da requisição e devolve o
+    /// <c>X-Request-Id</c> ao cliente. Um <c>X-Request-Id</c> recebido é mantido, para seguir o pedido entre sistemas.
+    /// </summary>
+    private static IApplicationBuilder UseRequestCorrelation(this IApplicationBuilder app) =>
         app.Use(async (context, next) =>
         {
             var requestId = context.Request.Headers["X-Request-Id"].FirstOrDefault()

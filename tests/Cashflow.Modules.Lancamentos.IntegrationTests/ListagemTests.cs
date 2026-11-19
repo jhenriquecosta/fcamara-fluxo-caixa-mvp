@@ -43,7 +43,8 @@ public sealed class ListagemTests(PostgresFixture db)
     }
 
     [Fact]
-    public async Task RF10_lista_o_dia_do_comerciante_marcando_o_estornado()
+    [Trait("Criterio", "AC4")]
+    public async Task A_lista_do_dia_traz_so_o_comerciante_do_token_e_marca_o_estornado()
     {
         var comerciante = Guid.NewGuid();
         var outro = Guid.NewGuid();
@@ -74,7 +75,8 @@ public sealed class ListagemTests(PostgresFixture db)
     }
 
     [Fact]
-    public async Task RF10_sem_data_usa_o_dia_de_negocio_de_sao_paulo()
+    [Trait("Criterio", "AC3")]
+    public async Task Sem_data_a_lista_usa_o_dia_de_negocio_de_sao_paulo()
     {
         var comerciante = Guid.NewGuid();
         using var factory = WebApiFactory.SoLancamentos(db.ConnectionString, FixedNow);
@@ -89,7 +91,8 @@ public sealed class ListagemTests(PostgresFixture db)
     }
 
     [Fact]
-    public async Task RF10_sem_escopo_de_leitura_responde_403()
+    [Trait("Criterio", "AC2")]
+    public async Task Listar_sem_o_escopo_de_leitura_responde_403()
     {
         using var factory = WebApiFactory.SoLancamentos(db.ConnectionString);
         using var client = Cliente(factory, Guid.NewGuid(), "lancamentos.write", "consolidado.read");
@@ -100,7 +103,7 @@ public sealed class ListagemTests(PostgresFixture db)
     }
 
     [Fact]
-    public async Task RF10_data_invalida_responde_400()
+    public async Task Listar_com_data_invalida_responde_400()
     {
         using var factory = WebApiFactory.SoLancamentos(db.ConnectionString);
         using var client = Cliente(factory, Guid.NewGuid(), "lancamentos.read");

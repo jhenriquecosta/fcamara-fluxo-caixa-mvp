@@ -95,13 +95,13 @@ No Kibana, a data view `cashflow-logs-*` mostra os logs JSON dos dois serviços.
 dotnet test --solution Cashflow.slnx
 ```
 
-A suíte tem 91 testes, organizados como os da referência. Os de integração e o ponta a ponta sobem PostgreSQL e Kafka reais via Testcontainers:
+A suíte tem 111 testes, organizados como os da referência. Os de integração e o ponta a ponta sobem PostgreSQL e Kafka reais via Testcontainers. O nome de cada teste é a regra que ele prova, e o critério de aceite do PRD vai num `Trait`: `dotnet test --solution Cashflow.slnx --filter-trait "Criterio=AC4"` roda só o que prova o AC4.
 
 | Projeto | Testes | O que cobre |
 |---|---|---|
-| `Modules.Lancamentos.UnitTests` | 13 | regras do lançamento e do estorno, dia do negócio em America/Sao_Paulo, tipo e hash do corpo |
-| `Modules.Lancamentos.IntegrationTests` | 17 | idempotência (replay, 422 de payload, 409 de concorrência), estorno, listagem do dia com a marca de estornado, auth, métricas, o WebAPI sem trabalho de fundo e com só o módulo ligado |
-| `Modules.Consolidado.UnitTests` | 4 | delta do movimento, saldo anterior, dia sem movimento |
+| `Modules.Lancamentos.UnitTests` | 24 | regras do lançamento e do estorno, dia do negócio em America/Sao_Paulo, tipo do contrato e impressão digital do corpo |
+| `Modules.Lancamentos.IntegrationTests` | 25 | idempotência (replay, 422 de payload, 409 de concorrência), estorno (inclusive de outro comerciante), listagem do dia com a marca de estornado, auth, métricas, o WebAPI sem trabalho de fundo e com só o módulo ligado |
+| `Modules.Consolidado.UnitTests` | 5 | efeito no saldo, estorno anulando o original, saldo de abertura, dia sem movimento |
 | `Modules.Consolidado.IntegrationTests` | 4 | consulta, data inválida, módulo isolado, carga de 50 req/s com ≥95% de sucesso |
 | `EndToEndTests` | 5 | a topologia do compose (WebAPI duas vezes e BackgroundServer): fluxo até o consolidado, estorno, entrega duplicada somando uma vez, DLT após 1+3 tentativas, lançamentos de pé com o consolidado fora |
 | `BlazorServerSide.IntegrationTests` | 28 | login (redirect sem sessão, credencial inválida, open redirect, cookie `HttpOnly`/`SameSite`), perfis, logout com antiforgery, token ausente do HTML e do cookie, escopos do token por perfil, e as telas contra a API real: lançar, listar, estornar, consolidado, 403 da API para o perfil consulta |
@@ -121,8 +121,10 @@ A convenção de logs e as métricas estão em [`docs/ultron/agents/logging.md`]
 
 ## Estrutura
 
+Cada projeto tem o seu `README.md`: por que existe, a finalidade, os padrões e o estilo arquitetural a que adere, e o que pode e não pode referenciar. Todo tipo e membro público de `src/` tem documentação XML, e o compilador cobra (`src/Directory.Build.props`).
+
 ```
-src/Cashflow.CrossCuttingConcerns/      IDateTimeProvider, exceções, extensões, hashes (não depende de nada)
+src/Cashflow.CrossCuttingConcerns/      IDateTimeProvider, pseudônimos de log, exceções, extensões (não depende de nada)
 src/Cashflow.Domain/                    Entity, IAggregateRoot, eventos de domínio, IRepository/IUnitOfWork, IMessageBus e o MessageBus
 src/Cashflow.Application/               ICommand/IQuery e handlers, Dispatcher, HandlerFactory, decorators [AuditLog] e [DatabaseRetry]
 src/Cashflow.Contracts/                 envelope do evento, payload, tipos e tópicos (schema do barramento, sem dependência)

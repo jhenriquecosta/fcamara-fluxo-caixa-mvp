@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
+/// <summary>O registro dos clientes HTTP das telas, um por serviço da API.</summary>
 public static class CashflowBlazorModules
 {
     /// <summary>

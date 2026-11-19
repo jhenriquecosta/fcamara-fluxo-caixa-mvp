@@ -10,15 +10,18 @@ using Microsoft.AspNetCore.Routing;
 
 namespace Cashflow.Modules.Consolidado.Endpoints;
 
+/// <summary>A rota de leitura do módulo: valida o HTTP, monta a consulta e despacha.</summary>
 public static class ConsolidadoEndpoints
 {
+    /// <summary>As rotas do módulo, exigindo o escopo <c>consolidado.read</c>.</summary>
     public static IEndpointRouteBuilder MapConsolidadoEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapGet("/api/v1/consolidado/{data}", GetAsync).RequireAuthorization(Scopes.ConsolidadoRead);
+        app.MapGet("/api/v1/consolidado/{data}", ConsultarDoDiaAsync).RequireAuthorization(Scopes.ConsolidadoRead);
         return app;
     }
 
-    private static async Task<IResult> GetAsync(string data, ClaimsPrincipal user, Dispatcher dispatcher, CancellationToken ct)
+    /// <summary><c>GET /api/v1/consolidado/{data}</c>: o saldo do dia <c>yyyy-MM-dd</c> do comerciante do token.</summary>
+    private static async Task<IResult> ConsultarDoDiaAsync(string data, ClaimsPrincipal user, Dispatcher dispatcher, CancellationToken ct)
     {
         if (!DateOnly.TryParseExact(data, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var dia))
             return CashflowProblems.DataInvalida();
@@ -27,6 +30,6 @@ public static class ConsolidadoEndpoints
             return CashflowProblems.TokenSemComerciante();
 
         return Results.Ok(await dispatcher.DispatchAsync(
-            new GetConsolidadoDiarioQuery { ComercianteId = comercianteId, Data = dia }, ct));
+            new ConsultarConsolidadoDoDiaQuery { ComercianteId = comercianteId, Data = dia }, ct));
     }
 }

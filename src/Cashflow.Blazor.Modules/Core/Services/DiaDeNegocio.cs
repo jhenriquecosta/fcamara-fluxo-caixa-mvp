@@ -5,6 +5,7 @@ public sealed class DiaDeNegocio(TimeProvider timeProvider)
 {
     private static readonly TimeZoneInfo Fuso = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
 
+    /// <summary>A data de hoje em America/Sao_Paulo.</summary>
     public DateOnly Hoje() =>
         DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(timeProvider.GetUtcNow().UtcDateTime, Fuso));
 }

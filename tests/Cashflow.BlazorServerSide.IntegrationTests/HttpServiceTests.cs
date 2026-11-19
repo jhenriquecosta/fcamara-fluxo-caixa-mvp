@@ -10,7 +10,8 @@ namespace Cashflow.BlazorServerSide.IntegrationTests;
 public sealed class HttpServiceTests
 {
     [Fact]
-    public async Task RF6_lancar_envia_bearer_e_a_chave_de_idempotencia_recebida()
+    [Trait("Criterio", "AC3")]
+    public async Task Lancar_envia_o_bearer_e_a_chave_de_idempotencia_da_intencao()
     {
         var api = new ApiFalsa(_ => ApiFalsa.Json(
             """{"id":"6f1c0a52-0a52-4d6a-9d3a-111111111111","comercianteId":"6f1c0a52-0a52-4d6a-9d3a-222222222222","data":"2026-11-19","valor":10.5,"tipo":"credito","descricao":null,"estornoDe":null}""",
@@ -30,7 +31,7 @@ public sealed class HttpServiceTests
     }
 
     [Fact]
-    public async Task RF9_problem_details_vira_mensagem_legivel()
+    public async Task ProblemDetails_da_api_vira_mensagem_legivel()
     {
         var api = new ApiFalsa(_ => ApiFalsa.Json(
             """{"title":"lançamento já estornado","status":409}""", HttpStatusCode.Conflict));
@@ -46,7 +47,7 @@ public sealed class HttpServiceTests
     }
 
     [Fact]
-    public async Task RF9_api_fora_do_ar_vira_indisponivel_sem_derrubar_a_tela()
+    public async Task Api_fora_do_ar_vira_indisponivel_sem_derrubar_a_tela()
     {
         var api = new ApiFalsa(_ => throw new HttpRequestException("connection refused"));
         await using var front = new FrontendFactory(() => api);
@@ -60,7 +61,8 @@ public sealed class HttpServiceTests
     }
 
     [Fact]
-    public async Task RF9_sem_sessao_nao_chama_a_api()
+    [Trait("Criterio", "AC6")]
+    public async Task Sem_sessao_a_tela_nao_chama_a_api()
     {
         var api = new ApiFalsa(_ => ApiFalsa.Json("[]"));
         await using var front = new FrontendFactory(() => api);

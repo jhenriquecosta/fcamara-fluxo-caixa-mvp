@@ -4,9 +4,17 @@ using Microsoft.Extensions.Configuration.Memory;
 
 namespace Cashflow.Infrastructure.Configuration;
 
+/// <summary>
+/// Os valores que todo host usa se ninguém disser outra coisa: emissor e audiência do token, fuso do
+/// negócio, níveis de log, broker e tópicos. Ficam aqui uma vez, e não copiados em cada <c>appsettings</c>.
+/// </summary>
 public static class CashflowDefaults
 {
-    public static readonly IReadOnlyDictionary<string, string?> Valores =
+    /// <summary>
+    /// Os padrões. A <c>Auth:SigningKey</c> daqui só serve ao ambiente local: em produção ela vem de
+    /// variável de ambiente ou cofre, que têm precedência.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, string?> Values =
         new Dictionary<string, string?>
         {
             ["Auth:Issuer"] = "cashflow-local",
@@ -23,16 +31,16 @@ public static class CashflowDefaults
         };
 
     /// <summary>
-    /// Entra como o primeiro provedor da configuração: o appsettings, as variáveis de
-    /// ambiente e os argumentos da linha de comando continuam tendo precedência.
+    /// Põe os padrões como a primeira fonte da configuração, a de menor prioridade: o appsettings, as
+    /// variáveis de ambiente e a linha de comando continuam valendo por cima deles.
     /// </summary>
-    public static void Aplicar(IConfigurationBuilder builder)
+    public static void RegisterAsLowestPrioritySource(IConfigurationBuilder builder)
     {
-        var fonte = new MemoryConfigurationSource { InitialData = Valores };
+        var source = new MemoryConfigurationSource { InitialData = Values };
 
         if (builder is ConfigurationManager manager)
-            manager.Sources.Insert(0, fonte);
+            manager.Sources.Insert(0, source);
         else
-            builder.AddInMemoryCollection(Valores);
+            builder.AddInMemoryCollection(Values);
     }
 }

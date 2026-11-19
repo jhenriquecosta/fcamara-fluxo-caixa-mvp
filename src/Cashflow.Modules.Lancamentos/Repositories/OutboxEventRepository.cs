@@ -4,6 +4,7 @@ using Dapper;
 
 namespace Cashflow.Modules.Lancamentos.Repositories;
 
+/// <summary>O outbox na tabela <c>outbox_event</c>. O envelope fica em <c>jsonb</c>, como foi serializado.</summary>
 public sealed class OutboxEventRepository(LancamentosDbContext dbContext) : IOutboxEventRepository
 {
     private const string Colunas = """
@@ -14,8 +15,10 @@ public sealed class OutboxEventRepository(LancamentosDbContext dbContext) : IOut
     private sealed record OutboxRow(
         Guid Id, string EventType, string ObjectId, string Message, DateTime CriadoEm, bool Published);
 
+    /// <inheritdoc />
     public IUnitOfWork UnitOfWork => dbContext;
 
+    /// <inheritdoc />
     public async Task AddAsync(OutboxEvent entity, CancellationToken cancellationToken = default)
     {
         var conn = await dbContext.GetConnectionAsync(cancellationToken);
@@ -25,15 +28,17 @@ public sealed class OutboxEventRepository(LancamentosDbContext dbContext) : IOut
             """, entity, dbContext.CurrentTransaction, cancellationToken: cancellationToken));
     }
 
+    /// <inheritdoc />
     public async Task<OutboxEvent?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var conn = await dbContext.GetConnectionAsync(cancellationToken);
         var row = await conn.QuerySingleOrDefaultAsync<OutboxRow>(new CommandDefinition(
             $"SELECT {Colunas} FROM outbox_event WHERE id = @id",
             new { id }, dbContext.CurrentTransaction, cancellationToken: cancellationToken));
-        return row is null ? null : Mapear(row);
+        return row is null ? null : ParaEntidade(row);
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<OutboxEvent>> GetPendentesAsync(int limite, CancellationToken cancellationToken = default)
     {
         var conn = await dbContext.GetConnectionAsync(cancellationToken);
@@ -44,9 +49,10 @@ public sealed class OutboxEventRepository(LancamentosDbContext dbContext) : IOut
             LIMIT @limite
             FOR UPDATE SKIP LOCKED
             """, new { limite }, dbContext.CurrentTransaction, cancellationToken: cancellationToken));
-        return rows.Select(Mapear).ToList();
+        return rows.Select(ParaEntidade).ToList();
     }
 
+    /// <inheritdoc />
     public async Task MarcarPublicadoAsync(Guid id, DateTimeOffset publicadoEm, CancellationToken cancellationToken = default)
     {
         var conn = await dbContext.GetConnectionAsync(cancellationToken);
@@ -55,6 +61,7 @@ public sealed class OutboxEventRepository(LancamentosDbContext dbContext) : IOut
             new { id, publicadoEm }, dbContext.CurrentTransaction, cancellationToken: cancellationToken));
     }
 
+    /// <inheritdoc />
     public async Task<double> IdadeDoPendenteMaisAntigoAsync(CancellationToken cancellationToken = default)
     {
         var conn = await dbContext.GetConnectionAsync(cancellationToken);
@@ -64,7 +71,7 @@ public sealed class OutboxEventRepository(LancamentosDbContext dbContext) : IOut
             """, transaction: dbContext.CurrentTransaction, cancellationToken: cancellationToken));
     }
 
-    private static OutboxEvent Mapear(OutboxRow row) => new()
+    private static OutboxEvent ParaEntidade(OutboxRow row) => new()
     {
         Id = row.Id,
         EventType = row.EventType,

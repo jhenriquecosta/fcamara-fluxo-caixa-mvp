@@ -3,31 +3,36 @@ using System.Data.Common;
 namespace Cashflow.Application.Decorators.DatabaseRetry;
 
 /// <summary>
-/// Repete a execução quando o banco devolve uma falha transitória. A referência casa a
+/// O laço de nova tentativa, comum aos decorators de comando e de consulta. A referência casa a
 /// mensagem do SQL Server; aqui vale o contrato do ADO.NET (<see cref="DbException.IsTransient"/>),
-/// que o Npgsql preenche — a Application continua sem conhecer o driver.
+/// que o Npgsql preenche, e a Application continua sem conhecer o driver.
 /// </summary>
 public abstract class DatabaseRetryDecoratorBase(DatabaseRetryAttribute options)
 {
-    protected async Task<T> WrapExecutionAsync<T>(Func<Task<T>> action)
+    /// <summary>
+    /// Executa a ação; numa falha transitória espera 100 ms × tentativa e repete, até
+    /// <see cref="DatabaseRetryAttribute.RetryTimes"/>. Qualquer outra falha sobe na hora.
+    /// </summary>
+    protected async Task<T> ExecuteWithRetryAsync<T>(Func<Task<T>> action)
     {
-        var executedTimes = 0;
+        var attempt = 0;
         while (true)
         {
             try
             {
-                executedTimes++;
+                attempt++;
                 return await action();
             }
-            catch (Exception ex) when (executedTimes < options.RetryTimes && IsTransient(ex))
+            catch (Exception ex) when (attempt < options.RetryTimes && IsTransient(ex))
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(100 * executedTimes));
+                await Task.Delay(TimeSpan.FromMilliseconds(100 * attempt));
             }
         }
     }
 
-    protected Task WrapExecutionAsync(Func<Task> action) =>
-        WrapExecutionAsync(async () =>
+    /// <inheritdoc cref="ExecuteWithRetryAsync{T}"/>
+    protected Task ExecuteWithRetryAsync(Func<Task> action) =>
+        ExecuteWithRetryAsync(async () =>
         {
             await action();
             return true;

@@ -29,7 +29,8 @@ public sealed class TokenTests
     [Theory]
     [InlineData("operador", "lancamentos.write lancamentos.read consolidado.read")]
     [InlineData("consulta", "lancamentos.read consolidado.read")]
-    public void Escopos_do_token_sao_os_do_perfil(string perfil, string escopos)
+    [Trait("Criterio", "AC2")]
+    public void O_token_carrega_so_os_escopos_do_perfil(string perfil, string escopos)
     {
         var usuario = UsuarioStore.Principal(new UsuarioOptions
         {
@@ -46,7 +47,8 @@ public sealed class TokenTests
     }
 
     [Fact]
-    public void Token_vive_cinco_minutos_e_e_aceito_pelos_parametros_da_api()
+    [Trait("Criterio", "AC6")]
+    public void O_token_vive_cinco_minutos_e_passa_na_validacao_da_api()
     {
         var token = Issuer().Emitir(UsuarioStore.Principal(FrontendFactory.Operador));
 
@@ -64,13 +66,15 @@ public sealed class TokenTests
     }
 
     [Fact]
+    [Trait("Criterio", "AC2")]
     public void Perfil_desconhecido_nao_recebe_escopo()
     {
         Assert.Empty(AccessTokenIssuer.Escopos("admin"));
     }
 
     [Fact]
-    public void Senha_e_verificada_pelo_hash_e_perfil_invalido_nao_entra()
+    [Trait("Criterio", "AC1")]
+    public void A_senha_e_conferida_pelo_hash_e_perfil_invalido_nao_entra()
     {
         var store = new UsuarioStore(new AppSettings
         {

@@ -15,6 +15,7 @@ namespace Cashflow.BlazorServerSide.Services;
 /// </summary>
 public sealed class AccessTokenIssuer(AppSettings settings, TimeProvider timeProvider)
 {
+    /// <summary>Os escopos da API que o perfil recebe; perfil desconhecido não recebe nenhum.</summary>
     public static string[] Escopos(string perfil) => perfil switch
     {
         Perfis.Operador => [Scopes.LancamentosWrite, Scopes.LancamentosRead, Scopes.ConsolidadoRead],
@@ -22,6 +23,7 @@ public sealed class AccessTokenIssuer(AppSettings settings, TimeProvider timePro
         _ => []
     };
 
+    /// <summary>O token para o usuário da sessão.</summary>
     public TokenModel Emitir(ClaimsPrincipal usuario)
     {
         var perfil = usuario.FindFirst(Perfis.ClaimType)?.Value ?? string.Empty;
