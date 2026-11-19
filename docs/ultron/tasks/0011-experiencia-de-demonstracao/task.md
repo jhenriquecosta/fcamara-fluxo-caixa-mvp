@@ -2,7 +2,7 @@
 
 tipo: feature
 branch: feature/0011-experiencia-de-demonstracao
-publicacao: pendente
+publicacao: https://github.com/jhenriquecosta/fcamara-fluxo-caixa-mvp/pull/32
 estado: concluído
 worktree: .claude/worktrees/feature-0011-experiencia-de-demonstracao
 responsavel: jhenriquecosta@hotmail.com
