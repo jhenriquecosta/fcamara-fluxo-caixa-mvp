@@ -2,7 +2,7 @@
 
 tipo: chore
 branch: chore/0015-terminal-sobe-a-stack
-publicacao: pendente
+publicacao: https://github.com/jhenriquecosta/fcamara-fluxo-caixa-mvp/pull/42
 estado: concluído
 worktree: .claude/worktrees/chore-0015-terminal-sobe-a-stack
 responsavel: jhenriquecosta@hotmail.com
