@@ -2,7 +2,7 @@
 
 tipo: chore
 branch: chore/0007-trilha-release-1-2-0
-publicacao: pendente
+publicacao: https://github.com/jhenriquecosta/fcamara-fluxo-caixa-mvp/pull/23
 estado: concluído
 responsavel: jhenriquecosta@hotmail.com
 next_skill: 
