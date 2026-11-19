@@ -8,8 +8,8 @@
 # ./start.sh                  → up (padrão): pré-requisitos, suíte, stack, saúde, ELK, painel
 # ./start.sh up [--sem-testes] → sobe a stack; --sem-testes pula a suíte
 # ./start.sh test             → roda a suíte e mostra cada teste ao passar
-# ./start.sh demo             → o roteiro narrado no terminal (RF3)
-# ./start.sh terminal         → a UI de terminal (RF4/RF5)
+# ./start.sh demo             → o roteiro narrado no terminal; sobe a stack se preciso (RF3)
+# ./start.sh terminal         → a UI de terminal; sobe a stack se preciso (RF4/RF5)
 # ./start.sh status           → o estado da stack e a saúde de cada serviço
 # ./start.sh logs [serviço]   → os logs do compose (segue)
 # ./start.sh down [--volumes] → derruba a stack; volumes só com a flag explícita
@@ -206,13 +206,23 @@ comando_status() {
   ((fora)) && return 1 || return 0
 }
 
+# A stack é requisito do terminal e da demo; quem quer ver o produto não deveria
+# precisar lembrar do up. Sobe pelo mesmo caminho do up, sem a suíte.
+garante_stack() {
+  if stack_no_ar; then
+    return 0
+  fi
+  aviso "a stack não está no ar — subindo (sem a suíte) antes de continuar"
+  comando_up --sem-testes
+}
+
 comando_demo() {
-  if ! stack_no_ar; then falha "a stack não está no ar — rode ./start.sh (ou ./start.sh up) primeiro"; exit 1; fi
+  garante_stack
   dotnet run --project src/Cashflow.Terminal -- demo
 }
 
 comando_terminal() {
-  if ! stack_no_ar; then falha "a stack não está no ar — rode ./start.sh (ou ./start.sh up) primeiro"; exit 1; fi
+  garante_stack
   dotnet run --project src/Cashflow.Terminal
 }
 
