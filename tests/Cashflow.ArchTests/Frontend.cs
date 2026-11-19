@@ -17,6 +17,13 @@ public sealed class Frontend
             "Npgsql", "Dapper", "Confluent.Kafka");
 
     [Fact]
+    public void O_terminal_tambem_so_conhece_o_contrato_http() =>
+        Camadas.SemDependencia(typeof(Cashflow.Terminal.Sessao).Assembly,
+            "Cashflow.Modules", "Cashflow.Domain", "Cashflow.Application", "Cashflow.Infrastructure",
+            "Cashflow.Contracts", "Cashflow.WebAPI", "Cashflow.BackgroundServer", "Cashflow.BlazorServerSide",
+            "Npgsql", "Dapper", "Confluent.Kafka");
+
+    [Fact]
     public void Nenhum_modulo_nem_host_da_api_conhece_o_frontend()
     {
         foreach (var assembly in new[]

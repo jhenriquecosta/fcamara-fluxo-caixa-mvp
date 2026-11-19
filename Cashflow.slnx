@@ -12,6 +12,7 @@
     <Project Path="src/Cashflow.WebAPI/Cashflow.WebAPI.csproj" />
     <Project Path="src/Cashflow.BackgroundServer/Cashflow.BackgroundServer.csproj" />
     <Project Path="src/Cashflow.Migrator/Cashflow.Migrator.csproj" />
+    <Project Path="src/Cashflow.Terminal/Cashflow.Terminal.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Cashflow.Testing/Cashflow.Testing.csproj" />
@@ -22,5 +23,6 @@
     <Project Path="tests/Cashflow.BlazorServerSide.IntegrationTests/Cashflow.BlazorServerSide.IntegrationTests.csproj" />
     <Project Path="tests/Cashflow.EndToEndTests/Cashflow.EndToEndTests.csproj" />
     <Project Path="tests/Cashflow.ArchTests/Cashflow.ArchTests.csproj" />
+    <Project Path="tests/Cashflow.Terminal.Tests/Cashflow.Terminal.Tests.csproj" />
   </Folder>
 </Solution>
