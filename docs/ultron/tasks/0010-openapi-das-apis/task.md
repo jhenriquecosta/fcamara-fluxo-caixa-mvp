@@ -5,7 +5,7 @@ branch: feature/0010-openapi-das-apis
 estado: em andamento
 worktree: .claude/worktrees/feature-0010-openapi-das-apis
 responsavel: jhenriquecosta@hotmail.com
-next_skill: ultron-discover
+next_skill: ultron-research
 issue: #26
 
 ## Contexto
