@@ -5,7 +5,7 @@ namespace Cashflow.Application.Decorators.AuditLog;
 
 /// <summary>
 /// Registra o comando executado e quanto levou. Só o tipo: o corpo carrega o comerciante,
-/// que nos logs aparece apenas como hash (docs/ultron/agents/logging.md).
+/// que nos logs aparece apenas como pseudônimo (docs/ultron/agents/logging.md).
 /// </summary>
 [Mapping(Type = typeof(AuditLogAttribute))]
 public sealed class AuditLogCommandDecorator<TCommand>(
@@ -13,6 +13,7 @@ public sealed class AuditLogCommandDecorator<TCommand>(
     ILogger<AuditLogCommandDecorator<TCommand>> logger) : ICommandHandler<TCommand>
     where TCommand : ICommand
 {
+    /// <inheritdoc />
     public async Task HandleAsync(TCommand command, CancellationToken cancellationToken = default)
     {
         var inicio = Stopwatch.GetTimestamp();

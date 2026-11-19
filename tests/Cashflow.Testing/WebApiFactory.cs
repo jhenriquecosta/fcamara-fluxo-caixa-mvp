@@ -15,18 +15,21 @@ public sealed class WebApiFactory(
     string connectionString,
     bool lancamentos = true,
     bool consolidado = true,
-    DateTimeOffset? agora = null) : WebApplicationFactory<WebApiEntryPoint>
+    DateTimeOffset? agora = null,
+    string ambiente = "Testing") : WebApplicationFactory<WebApiEntryPoint>
 {
-    public static WebApiFactory SoLancamentos(string connectionString, DateTimeOffset? agora = null) =>
-        new(connectionString, lancamentos: true, consolidado: false, agora);
+    /// <summary>O WebAPI como <c>lancamentos-api</c>, com o relógio opcionalmente fixo em <paramref name="agora"/>.</summary>
+    public static WebApiFactory SoLancamentos(string connectionString, DateTimeOffset? agora = null, string ambiente = "Testing") =>
+        new(connectionString, lancamentos: true, consolidado: false, agora, ambiente);
 
-    public static WebApiFactory SoConsolidado(string connectionString) =>
-        new(connectionString, lancamentos: false, consolidado: true);
+    /// <summary>O WebAPI como <c>consolidado-api</c>.</summary>
+    public static WebApiFactory SoConsolidado(string connectionString, string ambiente = "Testing") =>
+        new(connectionString, lancamentos: false, consolidado: true, ambiente: ambiente);
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         HostSettings.Aplicar(HostSettings.Modulos(connectionString, lancamentos, consolidado));
-        builder.UseEnvironment("Testing");
+        builder.UseEnvironment(ambiente);
 
         if (agora is { } instante)
         {

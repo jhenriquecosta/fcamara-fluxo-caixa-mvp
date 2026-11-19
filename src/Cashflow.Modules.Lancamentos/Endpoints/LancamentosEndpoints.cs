@@ -1,12 +1,15 @@
+using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json;
 using Cashflow.Application;
 using Cashflow.Infrastructure.Security;
+using Cashflow.Infrastructure.Web.OpenApi;
 using Cashflow.Infrastructure.Web.Problems;
 using Cashflow.Modules.Lancamentos.Commands;
 using Cashflow.Modules.Lancamentos.Entities;
 using Cashflow.Modules.Lancamentos.Models;
 using Cashflow.Modules.Lancamentos.Observability;
+using Cashflow.Modules.Lancamentos.Queries;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -19,11 +22,44 @@ namespace Cashflow.Modules.Lancamentos.Endpoints;
 /// </summary>
 public static class LancamentosEndpoints
 {
+    /// <summary>As rotas do módulo, todas exigindo o escopo do token correspondente.</summary>
     public static IEndpointRouteBuilder MapLancamentosEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/v1/lancamentos", RegistrarAsync).RequireAuthorization(Scopes.LancamentosWrite);
-        app.MapPost("/api/v1/lancamentos/{id:guid}/estornos", EstornarAsync).RequireAuthorization(Scopes.LancamentosWrite);
+        app.MapPost("/api/v1/lancamentos", RegistrarAsync)
+            .RequireAuthorization(Scopes.LancamentosWrite)
+            .WithMetadata(new IdempotencyKeyMetadata())
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+        app.MapPost("/api/v1/lancamentos/{id:guid}/estornos", EstornarAsync)
+            .RequireAuthorization(Scopes.LancamentosWrite)
+            .WithMetadata(new IdempotencyKeyMetadata())
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+        app.MapGet("/api/v1/lancamentos", ListarAsync)
+            .RequireAuthorization(Scopes.LancamentosRead)
+            .ProducesProblem(StatusCodes.Status400BadRequest);
         return app;
+    }
+
+    private static async Task<IResult> ListarAsync(
+        string? data, ClaimsPrincipal user, Dispatcher dispatcher, CancellationToken ct)
+    {
+        DateOnly? dia = null;
+        if (data is not null)
+        {
+            if (!DateOnly.TryParseExact(data, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+                return CashflowProblems.DataInvalida();
+            dia = parsed;
+        }
+
+        if (CashflowAuth.ComercianteId(user) is not { } comercianteId)
+            return CashflowProblems.TokenSemComerciante();
+
+        return Results.Ok(await dispatcher.DispatchAsync(
+            new ListarLancamentosDoDiaQuery { ComercianteId = comercianteId, Data = dia }, ct));
     }
 
     private static async Task<IResult> RegistrarAsync(
@@ -43,7 +79,7 @@ public static class LancamentosEndpoints
             return CashflowProblems.CorpoInvalido();
         }
 
-        if (body is null || body.Valor <= 0 || !TipoLancamentoExtensions.TryParseTexto(body.Tipo, out var tipo))
+        if (body is null || body.Valor <= 0 || !TipoLancamentoExtensions.TryLerDoContrato(body.Tipo, out var tipo))
             return CashflowProblems.LancamentoInvalido();
 
         if (CashflowAuth.ComercianteId(user) is not { } comercianteId)
@@ -58,9 +94,10 @@ public static class LancamentosEndpoints
             IdempotencyKey = chave
         };
         await dispatcher.DispatchAsync(command, ct);
-        return Mapear(command.Resultado!, metrics, estorno: false);
+        return ParaRespostaHttp(command.Resultado!, metrics, estorno: false);
     }
 
+    /// <summary><c>POST /api/v1/lancamentos/{id}/estornos</c>: estorna o lançamento <paramref name="id"/> do comerciante do token.</summary>
     private static async Task<IResult> EstornarAsync(
         Guid id, HttpRequest request, ClaimsPrincipal user, Dispatcher dispatcher, LancamentosMetrics metrics,
         CancellationToken ct)
@@ -79,31 +116,35 @@ public static class LancamentosEndpoints
             IdempotencyKey = chave
         };
         await dispatcher.DispatchAsync(command, ct);
-        return Mapear(command.Resultado!, metrics, estorno: true);
+        return ParaRespostaHttp(command.Resultado!, metrics, estorno: true);
     }
 
-    private static IResult Mapear(RegistroResultado resultado, LancamentosMetrics metrics, bool estorno)
+    /// <summary>
+    /// Traduz o resultado do caso de uso em status HTTP e conta a métrica do desfecho. Uma resposta
+    /// repetida devolve o JSON gravado na primeira vez, byte a byte.
+    /// </summary>
+    private static IResult ParaRespostaHttp(ResultadoDoLancamento resultado, LancamentosMetrics metrics, bool estorno)
     {
         switch (resultado)
         {
-            case RegistroResultado.Criado criado:
+            case ResultadoDoLancamento.Criado criado:
                 if (estorno) metrics.Estornado();
                 else metrics.Registrado();
                 return Results.Json(criado.Lancamento, statusCode: StatusCodes.Status201Created);
-            case RegistroResultado.Idempotente idempotente:
+            case ResultadoDoLancamento.RespostaRepetida repetida:
                 metrics.Idempotente();
-                return Results.Content(idempotente.RespostaJson, "application/json", statusCode: StatusCodes.Status201Created);
-            case RegistroResultado.PayloadDivergente:
+                return Results.Content(repetida.RespostaGravada, "application/json", statusCode: StatusCodes.Status201Created);
+            case ResultadoDoLancamento.ChaveUsadaComOutroPedido:
                 metrics.ConflitoPayload();
                 return CashflowProblems.PayloadDivergente(estorno);
-            case RegistroResultado.EmProcessamento:
+            case ResultadoDoLancamento.ChaveEmProcessamento:
                 metrics.ConflitoConcorrente();
                 return CashflowProblems.EmProcessamento();
-            case RegistroResultado.NaoEncontrado:
+            case ResultadoDoLancamento.LancamentoNaoEncontrado:
                 return CashflowProblems.NaoEncontrado();
-            case RegistroResultado.RegraInvalida:
+            case ResultadoDoLancamento.EstornoDeEstorno:
                 return CashflowProblems.RegraInvalida();
-            case RegistroResultado.Conflito:
+            case ResultadoDoLancamento.JaEstornado:
                 return CashflowProblems.JaEstornado();
             default:
                 return CashflowProblems.Inesperado();

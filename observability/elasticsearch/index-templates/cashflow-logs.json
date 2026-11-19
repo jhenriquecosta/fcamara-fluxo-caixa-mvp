@@ -1,5 +1,8 @@
 {
   "index_patterns": ["cashflow-logs-*"],
+  "_meta": {
+    "descricao": "O documento como o Serilog.Sinks.Elasticsearch grava: nível e mensagem na raiz, as propriedades do evento em fields.*. Os nomes dos campos em fields seguem logging.md."
+  },
   "template": {
     "settings": {
       "number_of_shards": 1,
@@ -7,34 +10,37 @@
       "index.lifecycle.name": "cashflow-logs-7d"
     },
     "mappings": {
+      "dynamic_templates": [
+        {
+          "fields_texto_como_keyword": {
+            "path_match": "fields.*",
+            "match_mapping_type": "string",
+            "mapping": { "type": "keyword", "ignore_above": 1024 }
+          }
+        }
+      ],
       "properties": {
         "@timestamp":      { "type": "date" },
-        "ts":              { "type": "date" },
         "level":           { "type": "keyword" },
-        "log.level":       { "type": "keyword" },
-        "context":         { "type": "keyword" },
-        "service":         { "type": "keyword" },
-        "service.name":    { "type": "keyword" },
-        "env":             { "type": "keyword" },
-        "msg":             { "type": "text" },
         "message":         { "type": "text" },
-        "correlation_id":  { "type": "keyword" },
-        "trace_id":        { "type": "keyword" },
-        "trace.id":        { "type": "keyword" },
-        "span_id":         { "type": "keyword" },
-        "span.id":         { "type": "keyword" },
-        "request_id":      { "type": "keyword" },
-        "comerciante_hash":{ "type": "keyword" },
-        "lancamento_id":   { "type": "keyword" },
-        "event_id":        { "type": "keyword" },
-        "estorno_de":      { "type": "keyword" },
-        "tipo":            { "type": "keyword" },
-        "valor":           { "type": "double" },
-        "status":          { "type": "integer" },
-        "duration_ms":     { "type": "double" },
-        "dlt":             { "type": "boolean" },
-        "error.message":   { "type": "text" },
-        "error.type":      { "type": "keyword" }
+        "messageTemplate": { "type": "keyword", "ignore_above": 1024 },
+        "exceptions":      { "type": "object", "enabled": false },
+        "fields": {
+          "properties": {
+            "service":          { "type": "keyword" },
+            "env":              { "type": "keyword" },
+            "SourceContext":    { "type": "keyword" },
+            "RequestPath":      { "type": "keyword" },
+            "RequestMethod":    { "type": "keyword" },
+            "StatusCode":       { "type": "integer" },
+            "Elapsed":          { "type": "double" },
+            "trace_id":         { "type": "keyword" },
+            "correlation_id":   { "type": "keyword" },
+            "request_id":       { "type": "keyword" },
+            "ComercianteHash":  { "type": "keyword" },
+            "ChaveHash":        { "type": "keyword" }
+          }
+        }
       }
     }
   }

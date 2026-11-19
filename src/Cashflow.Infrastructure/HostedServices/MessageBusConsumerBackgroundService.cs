@@ -4,12 +4,16 @@ using Microsoft.Extensions.Logging;
 
 namespace Cashflow.Infrastructure.HostedServices;
 
+/// <summary>
+/// Mantém um consumidor do barramento rodando enquanto o host vive. Um por par
+/// (consumidor, mensagem); o <c>BackgroundServer</c> sobe o do consolidado.
+/// </summary>
 public sealed class MessageBusConsumerBackgroundService<TConsumer, T>(
     IMessageBus messageBus,
     ILogger<MessageBusConsumerBackgroundService<TConsumer, T>> logger) : BackgroundService
 {
     /// <summary>
-    /// O receiver bloqueia no <c>Consume</c>: roda fora da thread de subida para não travar o host
+    /// O receiver bloqueia no <c>Consume</c>, por isso roda fora da thread de subida para não travar o host
     /// (a referência chama o receive sem aguardar).
     /// </summary>
     protected override Task ExecuteAsync(CancellationToken stoppingToken) =>

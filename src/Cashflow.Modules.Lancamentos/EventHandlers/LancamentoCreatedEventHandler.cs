@@ -7,12 +7,14 @@ using Cashflow.Modules.Lancamentos.Repositories;
 namespace Cashflow.Modules.Lancamentos.EventHandlers;
 
 /// <summary>
-/// O outbox nasce do evento de domínio, como no <c>ProductCreatedEventHandler</c> da referência.
-/// Roda dentro da transação do comando: o lançamento e o evento são gravados juntos ou nenhum dos dois.
+/// Transforma o lançamento recém-criado no evento de integração e o grava no outbox, como o
+/// <c>ProductCreatedEventHandler</c> da referência. Roda dentro da transação do comando: o lançamento
+/// e o evento são gravados juntos, ou nenhum dos dois.
 /// </summary>
 public sealed class LancamentoCreatedEventHandler(IOutboxEventRepository outboxEventRepository)
     : IDomainEventHandler<EntityCreatedEvent<Lancamento>>
 {
+    /// <summary>Monta o envelope (<c>lancamento.registrado</c> ou <c>lancamento.estornado</c>) e o grava como pendente.</summary>
     public async Task HandleAsync(EntityCreatedEvent<Lancamento> domainEvent, CancellationToken cancellationToken = default)
     {
         var lancamento = domainEvent.Entity;
@@ -24,7 +26,7 @@ public sealed class LancamentoCreatedEventHandler(IOutboxEventRepository outboxE
         var envelope = new CashflowEvent<LancamentoEventPayload>(
             eventId, eventType, domainEvent.EventDateTime, 1,
             new LancamentoEventPayload(
-                lancamento.Id, lancamento.ComercianteId, lancamento.Tipo.Texto(),
+                lancamento.Id, lancamento.ComercianteId, lancamento.Tipo.NoContrato(),
                 lancamento.Valor, lancamento.Data, lancamento.EstornoDe));
 
         await outboxEventRepository.AddAsync(new OutboxEvent

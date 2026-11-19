@@ -3,6 +3,8 @@
     <Project Path="src/Cashflow.CrossCuttingConcerns/Cashflow.CrossCuttingConcerns.csproj" />
     <Project Path="src/Cashflow.Domain/Cashflow.Domain.csproj" />
     <Project Path="src/Cashflow.Application/Cashflow.Application.csproj" />
+    <Project Path="src/Cashflow.Blazor.Modules/Cashflow.Blazor.Modules.csproj" />
+    <Project Path="src/Cashflow.BlazorServerSide/Cashflow.BlazorServerSide.csproj" />
     <Project Path="src/Cashflow.Contracts/Cashflow.Contracts.csproj" />
     <Project Path="src/Cashflow.Infrastructure/Cashflow.Infrastructure.csproj" />
     <Project Path="src/Cashflow.Modules.Lancamentos/Cashflow.Modules.Lancamentos.csproj" />
@@ -10,6 +12,7 @@
     <Project Path="src/Cashflow.WebAPI/Cashflow.WebAPI.csproj" />
     <Project Path="src/Cashflow.BackgroundServer/Cashflow.BackgroundServer.csproj" />
     <Project Path="src/Cashflow.Migrator/Cashflow.Migrator.csproj" />
+    <Project Path="src/Cashflow.Terminal/Cashflow.Terminal.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Cashflow.Testing/Cashflow.Testing.csproj" />
@@ -17,7 +20,9 @@
     <Project Path="tests/Cashflow.Modules.Lancamentos.IntegrationTests/Cashflow.Modules.Lancamentos.IntegrationTests.csproj" />
     <Project Path="tests/Cashflow.Modules.Consolidado.UnitTests/Cashflow.Modules.Consolidado.UnitTests.csproj" />
     <Project Path="tests/Cashflow.Modules.Consolidado.IntegrationTests/Cashflow.Modules.Consolidado.IntegrationTests.csproj" />
+    <Project Path="tests/Cashflow.BlazorServerSide.IntegrationTests/Cashflow.BlazorServerSide.IntegrationTests.csproj" />
     <Project Path="tests/Cashflow.EndToEndTests/Cashflow.EndToEndTests.csproj" />
     <Project Path="tests/Cashflow.ArchTests/Cashflow.ArchTests.csproj" />
+    <Project Path="tests/Cashflow.Terminal.Tests/Cashflow.Terminal.Tests.csproj" />
   </Folder>
 </Solution>

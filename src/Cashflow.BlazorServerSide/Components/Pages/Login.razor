@@ -1,0 +1,97 @@
+@page "/login"
+@attribute [AllowAnonymous]
+@attribute [ExcludeFromInteractiveRouting]
+@layout LoginLayout
+@using Cashflow.BlazorServerSide.Services
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@inject UsuarioStore UsuarioStore
+@inject NavigationManager NavigationManager
+@inject ILogger<Login> Logger
+
+<PageTitle>Entrar · Fluxo de Caixa</PageTitle>
+
+<div class="login-card">
+    <div class="marca marca-login">
+        <span class="marca-icone" aria-hidden="true">≋</span>
+        <span>Fluxo de Caixa</span>
+    </div>
+    <h1 class="h4 mb-1">Entrar</h1>
+    <p class="text-muted mb-4">Use as credenciais do seu caixa.</p>
+
+    @if (Erro is not null)
+    {
+        <div class="alert alert-danger" role="alert">@Erro</div>
+    }
+
+    <EditForm Model="Input!" method="post" OnValidSubmit="EntrarAsync" FormName="login" Enhance="false">
+        <DataAnnotationsValidator />
+        <div class="mb-3">
+            <label for="usuario" class="form-label">Usuário</label>
+            <InputText id="usuario" class="form-control" @bind-Value="Input!.Usuario" autocomplete="username" autofocus />
+            <ValidationMessage For="() => Input!.Usuario" />
+        </div>
+        <div class="mb-4">
+            <label for="senha" class="form-label">Senha</label>
+            <InputText id="senha" type="password" class="form-control" @bind-Value="Input!.Senha" autocomplete="current-password" />
+            <ValidationMessage For="() => Input!.Senha" />
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Entrar</button>
+    </EditForm>
+</div>
+
+@code {
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm]
+    private LoginInput? Input { get; set; }
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    private string? Erro { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Input ??= new();
+
+        // GET /login já autenticado: nada a fazer aqui.
+        if (HttpMethods.IsGet(HttpContext.Request.Method) && HttpContext.User.Identity?.IsAuthenticated == true)
+            NavigationManager.NavigateTo(Destino(), forceLoad: true);
+        await Task.CompletedTask;
+    }
+
+    private async Task EntrarAsync()
+    {
+        var usuario = UsuarioStore.Autenticar(Input!.Usuario, Input.Senha);
+        if (usuario is null)
+        {
+            // Mensagem única: não revela se o usuário existe.
+            Logger.LogWarning("login recusado");
+            Erro = "Usuário ou senha inválidos.";
+            return;
+        }
+
+        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,
+            UsuarioStore.Principal(usuario), new AuthenticationProperties { IsPersistent = false });
+        Logger.LogInformation("login de {Perfil}", usuario.Perfil);
+        NavigationManager.NavigateTo(Destino(), forceLoad: true);
+    }
+
+    /// <summary>Só caminho local: um ReturnUrl externo seria um open redirect.</summary>
+    private string Destino() =>
+        !string.IsNullOrEmpty(ReturnUrl) && ReturnUrl.StartsWith('/') && !ReturnUrl.StartsWith("//")
+            && !ReturnUrl.StartsWith("/\\") && !ReturnUrl.StartsWith("/login", StringComparison.OrdinalIgnoreCase)
+            ? ReturnUrl
+            : "/";
+
+    private sealed class LoginInput
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Informe o usuário.")]
+        public string Usuario { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Informe a senha.")]
+        public string Senha { get; set; } = string.Empty;
+    }
+}
