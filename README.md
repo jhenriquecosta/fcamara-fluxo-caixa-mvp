@@ -13,7 +13,7 @@ Um comerciante precisa controlar o fluxo de caixa diário e consultar o saldo co
 - O estorno é um **novo lançamento** de tipo oposto; o original nunca é editado.
 - O código é um **monólito modular** no molde do [`ModularMonolith`](https://github.com/jhenriquecosta/Practical.CleanArchitecture/tree/master/src/ModularMonolith) do Practical.CleanArchitecture: projetos compartilhados (CrossCuttingConcerns, Domain, Application, Contracts, Infrastructure), um módulo por serviço (`Cashflow.Modules.Lancamentos`, `Cashflow.Modules.Consolidado`) e três hosts (`WebAPI`, `BackgroundServer`, `Migrator`). Cada caso de uso é um `ICommand`/`IQuery` com o handler, acionado pelo `Dispatcher`.
 - O mesmo `Cashflow.WebAPI` sobe **duas vezes** no deploy, cada uma com um módulo ligado (`Modules:<X>:Enabled`). Por isso uma queda do consolidado não derruba os lançamentos. O outbox e o consumidor rodam no `BackgroundServer`.
-- O **frontend** (`Cashflow.Blazor.Modules` + `Cashflow.BlazorServerSide`, no molde do `ClassifiedAds.Blazor.Modules`/`BlazorServerSide` da referência) é mais um cliente da API: só fala HTTP, com um endereço por serviço. O login cria uma sessão por cookie `HttpOnly`; o host emite, por chamada, um token de 5 minutos com só os escopos do perfil, e o token nunca chega ao navegador (Blazor Server como BFF, ADR-0010). Perfis: **operador** (lança, estorna, consulta) e **consulta** (só lê); quem garante é a API, por escopo.
+- O **frontend** (`Cashflow.Blazor.Modules` + `Cashflow.BlazorServerSide`, no molde do `ClassifiedAds.Blazor.Modules`/`BlazorServerSide` da referência) é mais um cliente da API: só fala HTTP, com um endereço por serviço. O login cria uma sessão por cookie `HttpOnly`; o host emite, por chamada, um token de 5 minutos com só os escopos do perfil, e o token nunca chega ao navegador (Blazor Server como BFF, ADR-0010). Perfis: **operador** (lança, estorna, consulta) e **consulta** (só lê); quem garante é a API, por escopo. No MVP local a API valida a chave simétrica de desenvolvimento; a validação pelas chaves públicas do **JWKS (Cognito)** é o alvo desenhado no ADR-0010 e declarada na superfície do ADR-0013.
 - O desenho-base está em [`docs/requisitos/Arquietura-solucao-v2.png`](docs/requisitos/Arquietura-solucao-v2.png); o texto com os diagramas C4 e o mapeamento local ↔ AWS está em [`docs/arquitetura/arquitetura-alvo.md`](docs/arquitetura/arquitetura-alvo.md).
 
 Decisões registradas em [ADRs](docs/ultron/agents/adr/): estilo event-driven com outbox (0001), Kafka em KRaft (0002), PostgreSQL com bancos lógicos (0003), idempotência e estorno (0004), projeção e dia do registro (0005), stack .NET 10 (0006), a avaliação de event sourcing contra o ledger com outbox (0008) o monólito modular no molde da referência (0009, que substitui o 0007) e o frontend Blazor Server como BFF (0010). Os requisitos estão no [PRD](docs/requisitos/requisitos.md).
@@ -31,12 +31,25 @@ Um comando faz o ciclo inteiro — pré-requisitos, suíte, stack, saúde, ELK e
 ./start.sh demo          # o roteiro narrado: lançar → outbox → Kafka → consolidado → estorno → idempotência
 ./start.sh terminal      # a UI de terminal (menu por perfil; sobe a stack se preciso)
 ./start.sh test          # a suíte, com cada teste aparecendo ao passar
+./start.sh load          # a prova de carga do RNF-2 (k6 no container oficial)
 ./start.sh status        # o estado da stack e a saúde de cada serviço
 ./start.sh logs web      # os logs de um serviço (sem argumento: todos)
 ./start.sh down          # derruba a stack (volumes só com --volumes)
 ```
 
 O passo a passo manual continua abaixo, para quem quiser cada etapa à vista.
+
+### Prova de carga (RNF-2)
+
+O requisito de pico do enunciado é 50 requisições por segundo no consolidado com no máximo 5% de perda. `./start.sh load` sobe a stack se preciso e roda o roteiro do k6 (`load/k6-consolidado.js`) no container oficial, com a mesma chegada constante de tráfego e os limites no próprio script:
+
+```text
+cenário: 50 iterações/s por 60 s · 3.000 requisições
+sucesso: 100% (0 falhas) · p95 = 2,49 ms · limites p95 < 200 ms e falha < 5% ✓
+medido em 19/11/2026, stack local (Docker no host, PostgreSQL e consolidado-api do compose)
+```
+
+O p95 configurado no limite é o RNF-3 (proposta) para `GET /consolidado` — a mesma execução cobre os dois.
 
 ### O passo a passo manual
 

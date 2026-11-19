@@ -8,6 +8,7 @@
 # ./start.sh                  → up (padrão): pré-requisitos, suíte, stack, saúde, ELK, painel
 # ./start.sh up [--sem-testes] → sobe a stack; --sem-testes pula a suíte
 # ./start.sh test             → roda a suíte e mostra cada teste ao passar
+# ./start.sh load             → a prova de carga do RNF-2 (k6 no container; sobe a stack se preciso)
 # ./start.sh demo             → o roteiro narrado no terminal; sobe a stack se preciso (RF3)
 # ./start.sh terminal         → a UI de terminal; sobe a stack se preciso (RF4/RF5)
 # ./start.sh status           → o estado da stack e a saúde de cada serviço
@@ -226,6 +227,17 @@ comando_terminal() {
   dotnet run --project src/Cashflow.Terminal
 }
 
+comando_load() {
+  garante_stack
+  titulo "Carga — RNF-2: 50 req/s no consolidado, no máximo 5% de falha"
+  if docker run --rm --network host -v "$PWD/load:/scripts" grafana/k6 run /scripts/k6-consolidado.js; then
+    ok "carga concluída — o relatório acima é a evidência do RNF-2"
+  else
+    falha "a carga não passou dos limites do RNF-2"
+    exit 1
+  fi
+}
+
 comando_down() {
   local volumes=0
   for arg in "$@"; do
@@ -247,6 +259,7 @@ comando_down() {
 case "${1:-up}" in
   up)       if (($#)); then shift; fi; comando_up "$@" ;;
   test)     comando_test ;;
+  load)     comando_load ;;
   demo)     comando_demo ;;
   terminal) comando_terminal ;;
   status)   comando_status ;;
