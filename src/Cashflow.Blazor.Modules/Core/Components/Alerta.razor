@@ -1,0 +1,16 @@
+@if (!string.IsNullOrEmpty(Mensagem))
+{
+    <div class="alert alert-@Tipo d-flex align-items-start gap-2" role="@(Tipo == "danger" ? "alert" : "status")">
+        <span class="flex-grow-1">@Mensagem</span>
+        @if (AoFechar.HasDelegate)
+        {
+            <button type="button" class="btn-close" aria-label="Fechar" @onclick="AoFechar"></button>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public string? Mensagem { get; set; }
+    [Parameter] public string Tipo { get; set; } = "danger";
+    [Parameter] public EventCallback AoFechar { get; set; }
+}

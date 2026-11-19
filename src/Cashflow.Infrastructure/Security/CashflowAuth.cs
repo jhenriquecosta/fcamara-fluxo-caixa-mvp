@@ -11,7 +11,7 @@ namespace Cashflow.Infrastructure.Security;
 /// <summary>
 /// A autenticação e a autorização das APIs: JWT Bearer validado por emissor, audiência, assinatura e
 /// validade (sem tolerância de relógio), e uma política por escopo (<c>lancamentos.write</c>,
-/// <c>consolidado.read</c>). O comerciante vem do token, nunca do corpo: um comerciante não grava no caixa de outro.
+/// <c>lancamentos.read</c>, <c>consolidado.read</c>). O comerciante vem do token, nunca do corpo: um comerciante não grava no caixa de outro.
 /// </summary>
 public static class CashflowAuth
 {
@@ -57,6 +57,8 @@ public static class CashflowAuth
         {
             options.AddPolicy(Scopes.LancamentosWrite, policy =>
                 policy.RequireAssertion(context => HasScope(context.User, Scopes.LancamentosWrite)));
+            options.AddPolicy(Scopes.LancamentosRead, policy =>
+                policy.RequireAssertion(context => HasScope(context.User, Scopes.LancamentosRead)));
             options.AddPolicy(Scopes.ConsolidadoRead, policy =>
                 policy.RequireAssertion(context => HasScope(context.User, Scopes.ConsolidadoRead)));
         });
@@ -79,9 +81,12 @@ public static class Scopes
     /// <summary>Registrar e estornar lançamentos.</summary>
     public const string LancamentosWrite = "lancamentos.write";
 
+    /// <summary>Listar os lançamentos do dia (a tela de estorno e o perfil consulta, ADR-0010).</summary>
+    public const string LancamentosRead = "lancamentos.read";
+
     /// <summary>Consultar o consolidado diário.</summary>
     public const string ConsolidadoRead = "consolidado.read";
 
     /// <summary>Todos os escopos; é o que o <c>/dev/token</c> emite quando o pedido não diz quais.</summary>
-    public static readonly string[] Todos = { LancamentosWrite, ConsolidadoRead };
+    public static readonly string[] Todos = { LancamentosWrite, LancamentosRead, ConsolidadoRead };
 }

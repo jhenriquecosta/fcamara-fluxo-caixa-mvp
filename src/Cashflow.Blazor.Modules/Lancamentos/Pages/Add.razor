@@ -1,0 +1,56 @@
+@page "/lancamentos/novo"
+@attribute [Authorize(Policy = Policies.PodeLancar)]
+@inherits PaginaBase
+@using Cashflow.Blazor.Modules.Core
+
+<PageTitle>Novo lançamento · Fluxo de Caixa</PageTitle>
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">Lançamentos</p>
+        <h1>Novo lançamento</h1>
+    </div>
+    <a class="btn btn-outline-secondary" href="lancamentos">Ver lançamentos do dia</a>
+</div>
+
+<div class="form-card">
+    <Alerta Mensagem="@Sucesso" Tipo="success" AoFechar="() => Sucesso = null" />
+    <Alerta Mensagem="@Erro" />
+
+    <EditForm Model="Lancamento" OnValidSubmit="SalvarAsync" FormName="novo-lancamento">
+        <DataAnnotationsValidator />
+
+        <fieldset class="mb-3">
+            <legend class="form-label">Tipo</legend>
+            <InputRadioGroup @bind-Value="Lancamento.Tipo">
+                <div class="tipo-toggle">
+                    <label class="tipo-opcao credito">
+                        <InputRadio Value="@("credito")" /> <span>Crédito <small>entrada</small></span>
+                    </label>
+                    <label class="tipo-opcao debito">
+                        <InputRadio Value="@("debito")" /> <span>Débito <small>saída</small></span>
+                    </label>
+                </div>
+            </InputRadioGroup>
+            <ValidationMessage For="() => Lancamento.Tipo" />
+        </fieldset>
+
+        <div class="mb-3">
+            <label for="valor" class="form-label">Valor (R$)</label>
+            <InputNumber id="valor" class="form-control form-control-lg" @bind-Value="Lancamento.Valor" step="0.01" min="0.01" placeholder="0,00" />
+            <ValidationMessage For="() => Lancamento.Valor" />
+        </div>
+
+        <div class="mb-4">
+            <label for="descricao" class="form-label">Descrição <span class="text-muted">(opcional)</span></label>
+            <InputText id="descricao" class="form-control" @bind-Value="Lancamento.Descricao" maxlength="200" placeholder="Ex.: venda balcão, pagamento fornecedor" />
+            <ValidationMessage For="() => Lancamento.Descricao" />
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg w-100" disabled="@Ocupado">
+            @if (Ocupado) { <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span> }
+            Registrar lançamento
+        </button>
+        <p class="nota mt-3 mb-0">Lançamentos não são editados nem apagados. Para corrigir, estorne na lista do dia.</p>
+    </EditForm>
+</div>
