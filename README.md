@@ -22,6 +22,24 @@ Decisões registradas em [ADRs](docs/ultron/agents/adr/): estilo event-driven co
 
 Pré-requisitos: Docker com Compose (para o MVP), .NET 10 SDK (para os testes) e `jq` (para o roteiro abaixo).
 
+### O caminho curto: `./start.sh`
+
+Um comando faz o ciclo inteiro — pré-requisitos, suíte, stack, saúde, ELK e o painel de acesso:
+
+```bash
+./start.sh               # up: pré-requisitos → suíte → stack → saúde → ELK → painel (--sem-testes pula a suíte)
+./start.sh demo          # o roteiro narrado: lançar → outbox → Kafka → consolidado → estorno → idempotência
+./start.sh terminal      # a UI de terminal (menu por perfil: operador ou consulta)
+./start.sh test          # a suíte, com o resumo por projeto
+./start.sh status        # o estado da stack e a saúde de cada serviço
+./start.sh logs web      # os logs de um serviço (sem argumento: todos)
+./start.sh down          # derruba a stack (volumes só com --volumes)
+```
+
+O passo a passo manual continua abaixo, para quem quiser cada etapa à vista.
+
+### O passo a passo manual
+
 ```bash
 docker compose up -d --build
 observability/scripts/apply-elk.sh   # template de índice, ILM e data view do Kibana

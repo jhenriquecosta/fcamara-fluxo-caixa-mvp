@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    A segunda UI (PRD-0004 RF5): console com Spectre.Console sobre os mesmos clientes HTTP do
+    Cashflow.Blazor.Modules — o terminal não reimplementa consulta nenhuma, como o PRD exige.
+    Só conhece o contrato HTTP da API; quem garante autorização é a API, pelos escopos do token.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Cashflow.Terminal</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Spectre.Console" Version="0.55.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Cashflow.Blazor.Modules\Cashflow.Blazor.Modules.csproj" />
+  </ItemGroup>
+
+</Project>
