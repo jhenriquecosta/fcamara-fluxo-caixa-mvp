@@ -1,0 +1,22 @@
+@if (Visivel)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="confirm-titulo">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="confirm-titulo">@Titulo</h2>
+                    <button type="button" class="btn-close" aria-label="Fechar" @onclick="Fechar"></button>
+                </div>
+                <div class="modal-body">@Mensagem</div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="Fechar">@NaoTexto</button>
+                    <button type="button" class="btn btn-@CorConfirmar" disabled="@Ocupado" @onclick="ConfirmarAsync">
+                        @if (Ocupado) { <span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span> }
+                        @SimTexto
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
