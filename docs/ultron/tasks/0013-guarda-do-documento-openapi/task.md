@@ -2,7 +2,7 @@
 
 tipo: chore
 branch: chore/0013-guarda-do-documento-openapi
-publicacao: pendente
+publicacao: https://github.com/jhenriquecosta/fcamara-fluxo-caixa-mvp/pull/38
 estado: concluído
 worktree: .claude/worktrees/chore-0013-guarda-do-documento-openapi
 responsavel: jhenriquecosta@hotmail.com
