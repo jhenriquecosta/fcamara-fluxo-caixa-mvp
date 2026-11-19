@@ -11,9 +11,12 @@ public sealed class InfraestruturaTests
     private static HttpClient Cliente(ApiFalsa api, string baseUrl = "http://fonte/") =>
         new(api) { BaseAddress = new Uri(baseUrl) };
 
-    private static string Vetor(params (string Rotulo, string Valor, string Numero)[] series) =>
-        $$"""{"status":"success","data":{"resultType":"vector","result":[{{string.Join(",", series.Select(s =>
-            $$"""{"metric":{"{{s.Rotulo}}":"{{s.Valor}}"},"value":[1700000000,"{{s.Numero}}"]}"""))}}]}}""";
+    private static string Vetor(params (string Rotulo, string Valor, string Numero)[] series)
+    {
+        var resultado = string.Join(",", series.Select(s =>
+            "{\"metric\":{\"" + s.Rotulo + "\":\"" + s.Valor + "\"},\"value\":[1700000000,\"" + s.Numero + "\"]}"));
+        return "{\"status\":\"success\",\"data\":{\"resultType\":\"vector\",\"result\":[" + resultado + "]}}";
+    }
 
     [Fact]
     [Trait("Criterio", "AC3")]
