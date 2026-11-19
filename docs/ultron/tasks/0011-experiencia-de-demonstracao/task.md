@@ -30,7 +30,7 @@ Diferencial para a banca: uma experiência que prova que **toda** a infraestrutu
 
 ## Fases
 
-- [x] descoberta — `descoberta.md`
+- [x] discover — `descoberta.md`
 - [x] research — `research.md` (Research #0003, stack local)
 - [x] prd — `prd.md` (PRD-0004) · ADR-0011
 - [x] slices — `slices/README.md` (S1–S3)
