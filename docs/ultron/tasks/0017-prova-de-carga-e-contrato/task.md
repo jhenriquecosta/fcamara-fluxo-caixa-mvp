@@ -2,7 +2,7 @@
 
 tipo: chore
 branch: chore/0017-prova-de-carga-e-contrato
-publicacao: pendente
+publicacao: https://github.com/jhenriquecosta/fcamara-fluxo-caixa-mvp/pull/46
 estado: concluído
 worktree: .claude/worktrees/chore-0017-prova-de-carga-e-contrato
 responsavel: jhenriquecosta@hotmail.com
