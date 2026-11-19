@@ -4,6 +4,7 @@ using Cashflow.Modules.Consolidado.Endpoints;
 using Cashflow.Modules.Lancamentos.Endpoints;
 using Cashflow.Modules.Lancamentos.Observability;
 using Cashflow.WebAPI.ConfigurationOptions;
+using Scalar.AspNetCore;
 
 // Um host, todos os módulos — como o WebAPI da referência. O deploy decide quais ligam
 // (Modules:<X>:Enabled): o compose sobe este mesmo binário como lancamentos-api e como
@@ -18,6 +19,7 @@ builder.AddCashflowInfrastructure(appSettings.ServiceName, LancamentosMetrics.Me
 
 var services = builder.Services;
 services.AddApplicationServices();
+services.AddOpenApi(options => options.AddCashflowOpenApiTransforms(configuration));
 
 if (appSettings.Modules.Lancamentos.Enabled)
     services.AddLancamentosModule(opt => configuration.GetSection("Modules:Lancamentos").Bind(opt));
@@ -29,6 +31,13 @@ var app = builder.Build();
 
 app.UseCashflowWeb();
 app.MapCashflowEndpoints();
+
+// O contrato (ADR-0013) descreve só o que este deploy mapeia: as rotas condicionais abaixo.
+app.MapOpenApi();
+
+// A UI interativa é conveniência de desenvolvimento; fora dele, a rota não existe.
+if (app.Environment.IsDevelopment())
+    app.MapScalarApiReference(options => options.AddDocument("v1"));
 
 if (appSettings.Modules.Lancamentos.Enabled)
     app.MapLancamentosEndpoints();
