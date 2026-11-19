@@ -69,6 +69,7 @@ app.UseAntiforgery();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 
 // Formulário com antiforgery: ninguém desloga o usuário por um link num site de terceiros.
+// O parâmetro [FromForm] é o que liga a validação automática de antiforgery do minimal API.
 app.MapPost("/logout", async (HttpContext context, [FromForm] string? returnUrl) =>
 {
     await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
