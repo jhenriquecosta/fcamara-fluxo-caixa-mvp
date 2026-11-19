@@ -2,7 +2,7 @@
 
 tipo: feature
 branch: feature/0010-openapi-das-apis
-publicacao: pendente
+publicacao: https://github.com/jhenriquecosta/fcamara-fluxo-caixa-mvp/pull/36
 estado: concluído
 worktree: .claude/worktrees/feature-0010-openapi-das-apis
 responsavel: jhenriquecosta@hotmail.com
