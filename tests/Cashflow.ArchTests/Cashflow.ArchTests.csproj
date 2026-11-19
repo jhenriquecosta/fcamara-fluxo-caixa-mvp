@@ -31,6 +31,7 @@
     <ProjectReference Include="..\..\src\Cashflow.WebAPI\Cashflow.WebAPI.csproj" />
     <ProjectReference Include="..\..\src\Cashflow.BackgroundServer\Cashflow.BackgroundServer.csproj" />
     <ProjectReference Include="..\..\src\Cashflow.Blazor.Modules\Cashflow.Blazor.Modules.csproj" />
+    <ProjectReference Include="..\..\src\Cashflow.Terminal\Cashflow.Terminal.csproj" />
   </ItemGroup>
 
 </Project>
