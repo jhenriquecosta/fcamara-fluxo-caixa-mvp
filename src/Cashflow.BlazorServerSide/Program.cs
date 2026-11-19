@@ -69,6 +69,9 @@ app.UseAuthorization();
 app.UseAntiforgery();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
+// RF-8: o processo vivo e o serviço pronto respondem separados, como nos demais hosts.
+app.MapGet("/health/live", () => Results.Ok(new { status = "live" })).AllowAnonymous();
+app.MapGet("/health/ready", () => Results.Ok(new { status = "ready" })).AllowAnonymous();
 
 // Formulário com antiforgery: ninguém desloga o usuário por um link num site de terceiros.
 // O parâmetro [FromForm] é o que liga a validação automática de antiforgery do minimal API.
