@@ -2,7 +2,7 @@
 
 tipo: refactor
 branch: refactor/0009-codigo-que-se-explica
-publicacao: pendente
+publicacao: https://github.com/jhenriquecosta/fcamara-fluxo-caixa-mvp/pull/28
 estado: concluído
 responsavel: jhenriquecosta@hotmail.com
 next_skill: 
