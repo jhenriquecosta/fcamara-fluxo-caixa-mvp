@@ -28,7 +28,7 @@ Adotar o ModularMonolith da referência como estrutura e como mecanismo.
 
 | Projeto | Conteúdo | Depende de |
 |---|---|---|
-| `Cashflow.CrossCuttingConcerns` | `IDateTimeProvider`, exceções, extensões de tipo, hashes | nada |
+| `Cashflow.CrossCuttingConcerns` | `IDateTimeProvider`, exceções, extensões de tipo, pseudônimos de log (`PseudonimoDeLog`) | nada |
 | `Cashflow.Domain` | `Entity<TKey>`, `IAggregateRoot`, `IDomainEvent`/`EntityCreatedEvent<T>`, `IRepository`/`IUnitOfWork`, `IMessageBus`, `IMessageSender`, `IMessageReceiver`, `IMessageBusConsumer`, `IOutBoxEventPublisher`, `MessageBus` | CrossCuttingConcerns |
 | `Cashflow.Application` | `ICommand`/`ICommandHandler`, `IQuery`/`IQueryHandler`, `Dispatcher` (comandos, consultas, eventos de domínio), `HandlerFactory`, decorators `[AuditLog]` e `[DatabaseRetry]` | Domain |
 | `Cashflow.Contracts` | o envelope `CashflowEvent<T>`, `LancamentoEventPayload`, tipos de evento, tópicos | nada |
