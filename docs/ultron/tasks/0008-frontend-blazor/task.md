@@ -2,10 +2,11 @@
 
 tipo: feature
 branch: feature/0008-frontend-blazor
-estado: em andamento
+publicacao: pendente
+estado: concluído
 worktree: .claude/worktrees/feature-0008-frontend-blazor
 responsavel: jhenriquecosta@hotmail.com
-next_skill: ultron-coder
+next_skill: 
 issue: #24
 
 ## Contexto
