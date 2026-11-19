@@ -43,6 +43,15 @@ observability/scripts/apply-elk.sh   # template de índice, ILM e data view do K
 
 O primeiro `up` baixa as imagens e compila os hosts. O `migrator` aplica o esquema de cada módulo e sai, e só então os hosts sobem.
 
+### Contrato OpenAPI
+
+Cada API publica o próprio contrato em `/openapi/v1.json`, sempre e sem autenticação — cada documento lista só as rotas do módulo daquele deploy:
+
+- Lançamentos: http://localhost:8080/openapi/v1.json
+- Consolidado: http://localhost:8081/openapi/v1.json
+
+Em Development, a UI Scalar renderiza esse documento em http://localhost:8080/scalar e http://localhost:8081/scalar. A decisão está na [ADR-0013](docs/ultron/agents/adr/0013-superficie-openapi.md).
+
 ### Pela tela
 
 Abra http://localhost:8090. Usuários de demonstração (só no ambiente `Development`; as senhas estão em hash PBKDF2 no `appsettings.Development.json`):

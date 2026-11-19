@@ -14,4 +14,11 @@
     <ProjectReference Include="..\Cashflow.Modules.Consolidado\Cashflow.Modules.Consolidado.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- O contrato OpenAPI nativo (ADR-0013): o pacote gera o documento a partir das rotas mapeadas. -->
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.15" />
+    <!-- A UI que renderiza o documento, só em Development (ADR-0013). -->
+    <PackageReference Include="Scalar.AspNetCore" Version="2.16.16" />
+  </ItemGroup>
+
 </Project>

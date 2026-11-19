@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using Cashflow.Application;
 using Cashflow.Infrastructure.Security;
+using Cashflow.Infrastructure.Web.OpenApi;
 using Cashflow.Infrastructure.Web.Problems;
 using Cashflow.Modules.Lancamentos.Commands;
 using Cashflow.Modules.Lancamentos.Entities;
@@ -24,9 +25,22 @@ public static class LancamentosEndpoints
     /// <summary>As rotas do módulo, todas exigindo o escopo do token correspondente.</summary>
     public static IEndpointRouteBuilder MapLancamentosEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/v1/lancamentos", RegistrarAsync).RequireAuthorization(Scopes.LancamentosWrite);
-        app.MapPost("/api/v1/lancamentos/{id:guid}/estornos", EstornarAsync).RequireAuthorization(Scopes.LancamentosWrite);
-        app.MapGet("/api/v1/lancamentos", ListarAsync).RequireAuthorization(Scopes.LancamentosRead);
+        app.MapPost("/api/v1/lancamentos", RegistrarAsync)
+            .RequireAuthorization(Scopes.LancamentosWrite)
+            .WithMetadata(new IdempotencyKeyMetadata())
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+        app.MapPost("/api/v1/lancamentos/{id:guid}/estornos", EstornarAsync)
+            .RequireAuthorization(Scopes.LancamentosWrite)
+            .WithMetadata(new IdempotencyKeyMetadata())
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+        app.MapGet("/api/v1/lancamentos", ListarAsync)
+            .RequireAuthorization(Scopes.LancamentosRead)
+            .ProducesProblem(StatusCodes.Status400BadRequest);
         return app;
     }
 
