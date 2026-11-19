@@ -32,7 +32,11 @@ public sealed class FrontendFactory(Func<HttpMessageHandler> api) : WebApplicati
 
     private static UsuarioOptions Usuario(string login, string nome, string perfil) => new()
     {
-        Usuario = login, Nome = nome, SenhaHash = Hash, ComercianteId = Comerciante, Perfil = perfil
+        Usuario = login,
+        Nome = nome,
+        SenhaHash = Hash,
+        ComercianteId = Comerciante,
+        Perfil = perfil
     };
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)

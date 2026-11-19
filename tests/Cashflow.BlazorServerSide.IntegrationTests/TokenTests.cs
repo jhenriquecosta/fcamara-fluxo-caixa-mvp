@@ -17,7 +17,9 @@ public sealed class TokenTests
     {
         Auth = new AuthOptions
         {
-            Issuer = TestTokens.Issuer, Audience = TestTokens.Audience, SigningKey = TestTokens.SigningKey,
+            Issuer = TestTokens.Issuer,
+            Audience = TestTokens.Audience,
+            SigningKey = TestTokens.SigningKey,
             AccessTokenMinutes = 5
         }
     }, new FixedTimeProvider(Agora));
@@ -31,7 +33,10 @@ public sealed class TokenTests
     {
         var usuario = UsuarioStore.Principal(new UsuarioOptions
         {
-            Usuario = "u", Nome = "U", ComercianteId = FrontendFactory.Comerciante, Perfil = perfil
+            Usuario = "u",
+            Nome = "U",
+            ComercianteId = FrontendFactory.Comerciante,
+            Perfil = perfil
         });
 
         var jwt = Ler(Issuer().Emitir(usuario));
