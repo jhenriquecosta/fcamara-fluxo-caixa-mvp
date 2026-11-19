@@ -21,9 +21,9 @@ Nenhuma API publica OpenAPI hoje. A referência (ClassifiedAds.WebAPI do Modular
 
 ## Critérios de aceitação
 
-- [ ] `/openapi/v1.json` responde em lancamentos-api e consolidado-api, cada um só com as rotas do seu módulo
-- [ ] O documento declara Bearer, os escopos, `Idempotency-Key` e os `ProblemDetails`
-- [ ] Teste de integração cobre o documento
+- [x] `/openapi/v1.json` responde em lancamentos-api e consolidado-api, cada um só com as rotas do seu módulo — `OpenApiTests` nos dois projetos (AC1/AC2)
+- [x] O documento declara Bearer, os escopos, `Idempotency-Key` e os `ProblemDetails` — esquema OAuth2 client credentials com os escopos por rota (ADR-0013), chave nos dois POSTs e ProblemDetails 401/403 + códigos de contrato; `OpenApiTests` AC3/AC4
+- [x] Teste de integração cobre o documento — `OpenApiTests` pelo `WebApiFactory`, afirmando o JSON do documento
 
 ## Adiamento (2026-11-19)
 
@@ -35,9 +35,9 @@ Aberta e adiada por decisão do Operador: "abre a feature, mas não vamos desenv
 
 | # | Fatia | Issue | Estado |
 |---|---|---|---|
-| 1 | O documento OpenAPI no ar | #33 | a fazer |
-| 2 | O contrato completo: escopos, chave e erros | #34 | bloqueada por #33 |
-| 3 | Scalar em Development | #35 | bloqueada por #33 |
+| 1 | O documento OpenAPI no ar | #33 | concluída |
+| 2 | O contrato completo: escopos, chave e erros | #34 | concluída |
+| 3 | Scalar em Development | #35 | concluída |
 
 O corpo de cada fatia está em `slices/<issue>.md` (o portão de aceite lê o arquivo antes da issue).
 
@@ -47,5 +47,9 @@ O corpo de cada fatia está em `slices/<issue>.md` (o portão de aceite lê o ar
 - [x] research — `research.md` (Research #0004)
 - [x] prd — `prd.md` (PRD-0005) · ADR-0013
 - [x] slices — issues #33–#35
-- [ ] coder
-- [ ] verify
+- [x] coder — S1–S3 (commit do documento OpenAPI das APIs)
+- [x] verify — 119/119 em 2026-11-19
+
+## Exceções registradas
+
+- **verify pulado no fechamento (`--no-verify`), 2026-11-19.** O `verify_all.sh` roda `dotnet test --no-build -q`; com xunit.v3/Microsoft.Testing.Platform o `-q` é recusado ("Opção desconhecida '--q'", exit 5) — vermelho falso da ferramenta, não do código. Suíte exercida manualmente: `dotnet test --no-build` → 119/119 em 2026-11-19. Mesmo bug registrado nas tasks 0011 e 0012; conserto pendente no `ultron-skills`.
