@@ -31,6 +31,8 @@ services.AddCashflowBlazorModules(
     new Uri(appSettings.ResourceServer.Lancamentos),
     new Uri(appSettings.ResourceServer.Consolidado));
 
+services.AddCashflowInfraestrutura(configuration);
+
 services.AddSingleton<UsuarioStore>();
 services.AddSingleton<AccessTokenIssuer>();
 services.AddScoped<ITokenManager, TokenManager>();

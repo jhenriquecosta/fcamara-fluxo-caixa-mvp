@@ -140,6 +140,18 @@ services:
       Auth__Audience: cashflow-api
       Auth__SigningKey: dev-only-signing-key-change-me-32-chars-min
       Serilog__ElasticsearchUrl: http://elasticsearch:9200
+      # Painel de infraestrutura (ADR-0011): o servidor fala com a rede interna; os atalhos
+      # do appsettings continuam em localhost, porque é o navegador que os abre.
+      Infraestrutura__Enabled: "true"
+      Infraestrutura__PrometheusUrl: http://prometheus:9090
+      Infraestrutura__ElasticsearchUrl: http://elasticsearch:9200
+      Infraestrutura__Servicos__0__HealthUrl: http://lancamentos-api:8080/health
+      Infraestrutura__Servicos__1__HealthUrl: http://consolidado-api:8080/health
+      Infraestrutura__Servicos__2__HealthUrl: http://background-server:8080/health
+      Infraestrutura__Servicos__3__HealthUrl: http://prometheus:9090/-/healthy
+      Infraestrutura__Servicos__4__HealthUrl: http://elasticsearch:9200/_cluster/health
+      Infraestrutura__Servicos__5__HealthUrl: http://kibana:5601/api/status
+      Infraestrutura__Servicos__6__HealthUrl: http://grafana:3000/api/health
     ports:
       - "8090:8080"
     depends_on:

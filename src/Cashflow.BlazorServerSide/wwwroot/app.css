@@ -95,3 +95,22 @@ tr.estornado .valor { text-decoration: line-through; }
     .marca { margin-bottom: 1rem; }
     .conteudo { padding: 1.25rem 1rem; }
 }
+
+/* ---------- infraestrutura ---------- */
+.menu-secao { margin-top: 1rem; padding: 0 .75rem; font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: #7d879c; }
+.saude-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: .75rem; }
+.saude-card { background: var(--cf-surface); border: 1px solid var(--cf-border); border-left: 4px solid var(--cf-credito); border-radius: .6rem; padding: .7rem .9rem; display: flex; flex-direction: column; gap: .15rem; }
+.saude-card.fora { border-left-color: var(--cf-debito); background: #fef5f4; }
+.saude-status { font-size: .75rem; font-weight: 600; color: var(--cf-credito); }
+.saude-card.fora .saude-status { color: var(--cf-debito); }
+.saude-papel { font-size: .78rem; color: var(--cf-muted); }
+.saude-detalhe { font-size: .78rem; font-variant-numeric: tabular-nums; }
+.logs { background: #0f1626; color: #d6dbe6; border-radius: .75rem; padding: .75rem 1rem; font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: .78rem; max-height: 420px; overflow: auto; }
+.log-linha { display: grid; grid-template-columns: 70px 90px 140px 1fr; gap: .75rem; padding: .15rem 0; border-bottom: 1px solid rgba(255,255,255,.04); }
+.log-hora { color: #7d879c; }
+.log-servico { color: #8fb4ff; }
+.log-msg { word-break: break-word; }
+.nivel-warning .log-nivel { color: #f5c26b; }
+.nivel-error .log-nivel, .nivel-fatal .log-nivel { color: #ff8a80; }
+.nivel-information .log-nivel { color: #7ee2b8; }
+@media (max-width: 768px) { .log-linha { grid-template-columns: 1fr; gap: 0; } }

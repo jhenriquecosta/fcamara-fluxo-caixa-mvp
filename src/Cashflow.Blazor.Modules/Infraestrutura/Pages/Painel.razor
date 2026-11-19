@@ -1,0 +1,161 @@
+@page "/infraestrutura"
+@attribute [Authorize(Policy = Policies.PodeConsultar)]
+@implements IDisposable
+@using Cashflow.Blazor.Modules.Core
+@using Cashflow.Blazor.Modules.Infraestrutura.Models
+@using Cashflow.Blazor.Modules.Infraestrutura.Services
+
+<PageTitle>Infraestrutura · Fluxo de Caixa</PageTitle>
+
+@if (!Opcoes.Value.Enabled)
+{
+    <div class="vazio">
+        <h1>Painel desligado</h1>
+        <p>O painel de infraestrutura só liga em ambiente de demonstração (<code>Infraestrutura:Enabled</code>).</p>
+    </div>
+}
+else
+{
+    <div class="page-header">
+        <div>
+            <p class="eyebrow">Infraestrutura</p>
+            <h1>A solução por dentro</h1>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+            <span class="nota mb-0">@(Atualizado is { } a ? $"atualizado às {Formatacao.Hora(a)} · a cada 10 s" : "carregando…")</span>
+            <button type="button" class="btn btn-outline-secondary" @onclick="AtualizarAsync">Atualizar</button>
+        </div>
+    </div>
+
+    <section aria-labelledby="saude-titulo" class="mb-4">
+        <h2 id="saude-titulo" class="section-title">Saúde dos serviços</h2>
+        <div class="saude-grid">
+            @foreach (var s in Saude ?? Array.Empty<SaudeServico>())
+            {
+                <div class="saude-card @(s.Disponivel ? "ok" : "fora")">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong>@s.Nome</strong>
+                        <span class="saude-status">@(s.Disponivel ? "de pé" : "fora")</span>
+                    </div>
+                    <span class="saude-papel">@s.Papel</span>
+                    <span class="saude-detalhe">@(s.Disponivel ? $"{s.LatenciaMs:0} ms" : s.Erro)</span>
+                </div>
+            }
+        </div>
+    </section>
+
+    <section aria-labelledby="sinais-titulo" class="mb-4">
+        <h2 id="sinais-titulo" class="section-title">Sinais (Prometheus) — os mesmos que os alertas vigiam</h2>
+        @if (ErroSinais is not null)
+        {
+            <Alerta Mensagem="@ErroSinais" Tipo="warning" />
+        }
+        else if (Sinais is not null)
+        {
+            <div class="saldo-grid mb-3">
+                <div class="saldo-card">
+                    <span class="saldo-label">Idade do outbox</span>
+                    <span class="saldo-valor @(Sinais.OutboxIdadeSegundos > 10 ? "negativo" : "")">@Segundos(Sinais.OutboxIdadeSegundos)</span>
+                    <span class="saldo-ajuda">evento mais antigo não publicado · alerta &gt; 10 s</span>
+                </div>
+                <div class="saldo-card">
+                    <span class="saldo-label">Lag do consumidor</span>
+                    <span class="saldo-valor @(Sinais.ConsumerLag > 1000 ? "negativo" : "")">@(Sinais.ConsumerLag?.ToString("0") ?? "—")</span>
+                    <span class="saldo-ajuda">mensagens por projetar · alerta &gt; 1000</span>
+                </div>
+                <div class="saldo-card">
+                    <span class="saldo-label">Dead-letter (1 h)</span>
+                    <span class="saldo-valor @(Sinais.DltUltimaHora > 0 ? "negativo" : "")">@Sinais.DltUltimaHora.ToString("0")</span>
+                    <span class="saldo-ajuda">eventos que esgotaram as tentativas</span>
+                </div>
+                <div class="saldo-card">
+                    <span class="saldo-label">Lançamentos</span>
+                    <span class="saldo-valor">@Sinais.LancamentosPorResultado.Values.Sum().ToString("0")</span>
+                    <span class="saldo-ajuda">@string.Join(" · ", Sinais.LancamentosPorResultado.Select(kv => $"{kv.Key}: {kv.Value:0}"))</span>
+                </div>
+            </div>
+            <div class="table-responsive card-tabela">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">Serviço</th>
+                            <th scope="col">Coleta</th>
+                            <th scope="col" class="text-end">Req/s (1 min)</th>
+                            <th scope="col" class="text-end">p95 (5 min)</th>
+                            <th scope="col" class="text-end">Erros 5xx</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in Sinais.Servicos)
+                        {
+                            <tr>
+                                <td>@s.Servico</td>
+                                <td><span class="badge @(s.Up ? "tipo-credito" : "tipo-debito")">@(s.Up ? "up" : "down")</span></td>
+                                <td class="text-end valor">@s.RequisicoesPorSegundo.ToString("0.00")</td>
+                                <td class="text-end valor">@(s.P95Ms is { } p ? $"{p:0} ms" : "—")</td>
+                                <td class="text-end valor">@(s.TaxaErro is { } e ? e.ToString("P1") : "—")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+
+    <section aria-labelledby="logs-titulo" class="mb-4">
+        <div class="d-flex justify-content-between align-items-end flex-wrap gap-2 mb-2">
+            <h2 id="logs-titulo" class="section-title mb-0">Últimos logs (Elasticsearch)</h2>
+            <div class="d-flex gap-2">
+                <select class="form-select form-select-sm" aria-label="Serviço" @bind="FiltroServico" @bind:after="CarregarLogsAsync">
+                    <option value="">todos os serviços</option>
+                    @foreach (var s in PrometheusService.ServicosDaAplicacao.Append("web"))
+                    {
+                        <option value="@s">@s</option>
+                    }
+                </select>
+                <select class="form-select form-select-sm" aria-label="Nível mínimo" @bind="FiltroNivel" @bind:after="CarregarLogsAsync">
+                    <option value="">todos os níveis</option>
+                    @foreach (var n in LogsService.Niveis)
+                    {
+                        <option value="@n">@n+</option>
+                    }
+                </select>
+            </div>
+        </div>
+        @if (ErroLogs is not null)
+        {
+            <Alerta Mensagem="@ErroLogs" Tipo="warning" />
+        }
+        else if (Logs is { Count: 0 })
+        {
+            <div class="vazio"><p>Nenhum log com esse filtro.</p></div>
+        }
+        else if (Logs is not null)
+        {
+            <div class="logs">
+                @foreach (var l in Logs)
+                {
+                    <div class="log-linha nivel-@l.Nivel.ToLowerInvariant()">
+                        <span class="log-hora">@Formatacao.Hora(l.Instante)</span>
+                        <span class="log-nivel">@l.Nivel</span>
+                        <span class="log-servico">@l.Servico</span>
+                        <span class="log-msg">@l.Mensagem</span>
+                    </div>
+                }
+            </div>
+        }
+    </section>
+
+    <section aria-labelledby="atalhos-titulo">
+        <h2 id="atalhos-titulo" class="section-title">Ferramentas de operação</h2>
+        <div class="atalhos mt-0">
+            @foreach (var atalho in Opcoes.Value.Atalhos)
+            {
+                <a class="atalho" href="@atalho.Url" target="_blank" rel="noopener">
+                    <strong>@atalho.Nome ↗</strong>
+                    <span>@atalho.Descricao</span>
+                </a>
+            }
+        </div>
+    </section>
+}

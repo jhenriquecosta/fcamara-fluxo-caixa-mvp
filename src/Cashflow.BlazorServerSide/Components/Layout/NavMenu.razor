@@ -1,4 +1,5 @@
 @inject NavigationManager NavigationManager
+@inject Microsoft.Extensions.Options.IOptions<Cashflow.Blazor.Modules.Infraestrutura.InfraestruturaOptions> Infraestrutura
 
 <aside class="sidebar">
     <a class="marca" href="">
@@ -13,6 +14,11 @@
             <NavLink class="menu-item" href="lancamentos/novo">Novo lançamento</NavLink>
         </AuthorizeView>
         <NavLink class="menu-item" href="consolidado">Consolidado</NavLink>
+        @if (Infraestrutura.Value.Enabled)
+        {
+            <span class="menu-secao">Operação</span>
+            <NavLink class="menu-item" href="infraestrutura">Infraestrutura</NavLink>
+        }
     </nav>
 
     <AuthorizeView>
