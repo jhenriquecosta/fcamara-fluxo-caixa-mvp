@@ -12,3 +12,7 @@ Os commits desde v1.1.0 são refactor/chore, e o versionize deriva bump nenhum (
 ## Critérios de aceitação
 
 - [x] `VERSION` declara `1.2.0`, e `versionize.py propose` passa a propor 1.2.0 (declaração à frente da tag).
+
+## Exceções registradas
+
+- **verify do fechamento pulado (`--no-verify`):** mesmo motivo da task 0005 (ultron-skills#481). A mudança é só o arquivo `VERSION`; o CI do PR é a verificação.
