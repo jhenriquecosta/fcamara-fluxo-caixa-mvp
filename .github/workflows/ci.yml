@@ -1,0 +1,46 @@
+name: CI
+
+# Build, formatação e a suíte completa (unidade, integração, ponta a ponta e
+# ArchTests) em todo PR e push contra as branches de vida longa.
+# Integração e ponta a ponta sobem Postgres e Kafka via Testcontainers, que usa
+# o Docker já disponível no runner ubuntu.
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore Cashflow.slnx
+
+      - name: Build
+        run: dotnet build Cashflow.slnx --no-restore -c Release
+
+      - name: Format
+        run: dotnet format Cashflow.slnx --verify-no-changes --no-restore
+
+      - name: Test
+        run: dotnet test --solution Cashflow.slnx --no-build -c Release
