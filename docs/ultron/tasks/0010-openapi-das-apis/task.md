@@ -5,7 +5,7 @@ branch: feature/0010-openapi-das-apis
 estado: em andamento
 worktree: .claude/worktrees/feature-0010-openapi-das-apis
 responsavel: jhenriquecosta@hotmail.com
-next_skill: ultron-slices
+next_skill: ultron-coder
 issue: #26
 
 ## Contexto
@@ -30,3 +30,22 @@ Nenhuma API publica OpenAPI hoje. A referência (ClassifiedAds.WebAPI do Modular
 Aberta e adiada por decisão do Operador: "abre a feature, mas não vamos desenvolver agora".
 
 **Gatilhos de retomada:** a task 0009 (`refactor/0009-codigo-que-se-explica`) e a 0008 (frontend) entraram na `develop`. Nascer depois da 0009 evita retrabalho com a regra de XML doc (`CS1591` como erro) e com a convenção de nomes de teste. Para retomar, faça o merge da `develop` nesta branch e siga com `/ultron-discover`.
+
+## Fatias publicadas
+
+| # | Fatia | Issue | Estado |
+|---|---|---|---|
+| 1 | O documento OpenAPI no ar | #33 | a fazer |
+| 2 | O contrato completo: escopos, chave e erros | #34 | bloqueada por #33 |
+| 3 | Scalar em Development | #35 | bloqueada por #33 |
+
+O corpo de cada fatia está em `slices/<issue>.md` (o portão de aceite lê o arquivo antes da issue).
+
+## Fases
+
+- [x] discover — `descoberta.md`
+- [x] research — `research.md` (Research #0004)
+- [x] prd — `prd.md` (PRD-0005) · ADR-0013
+- [x] slices — issues #33–#35
+- [ ] coder
+- [ ] verify
