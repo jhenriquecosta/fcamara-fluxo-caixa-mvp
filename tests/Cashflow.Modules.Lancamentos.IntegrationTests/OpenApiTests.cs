@@ -86,6 +86,27 @@ public sealed class OpenApiTests(PostgresFixture db)
         requisito.GetProperty("OAuth2").EnumerateArray().Select(e => e.GetString()).ToList();
 
     [Fact]
+    [Trait("Criterio", "AC4")]
+    public async Task Operacao_sem_requisito_de_seguranca_nao_declara_401_nem_403()
+    {
+        using var api = WebApiFactory.SoLancamentos(db.ConnectionString);
+        using var anonimo = api.CreateClient();
+
+        var json = await DocumentoAsync(anonimo);
+        foreach (var caminho in json.GetProperty("paths").EnumerateObject())
+        foreach (var operacao in caminho.Value.EnumerateObject())
+        {
+            var respostas = operacao.Value.GetProperty("responses");
+            var temSeguranca = operacao.Value.TryGetProperty("security", out var seguranca)
+                               && seguranca.GetArrayLength() > 0;
+            if (temSeguranca)
+                continue;
+            Assert.False(respostas.TryGetProperty("401", out _), $"{caminho.Name} {operacao.Name} declara 401 sem requisito");
+            Assert.False(respostas.TryGetProperty("403", out _), $"{caminho.Name} {operacao.Name} declara 403 sem requisito");
+        }
+    }
+
+    [Fact]
     [Trait("Criterio", "AC5")]
     public async Task A_ui_scalar_responde_em_development()
     {
