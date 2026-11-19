@@ -21,12 +21,12 @@ Diferencial para a banca: uma experiência que prova que **toda** a infraestrutu
 
 ## Critérios de aceitação
 
-- [ ] `./start.sh` sobe a stack do zero, roda a suíte e termina com o painel de URLs e a saúde de cada serviço
-- [ ] `./start.sh demo` executa o fluxo ponta a ponta (lançar → outbox → Kafka → consolidado → estorno → idempotência) narrando cada passo
-- [ ] O painel Infraestrutura do front mostra saúde, métricas e logs reais da stack
-- [ ] A UI de terminal faz lançar, estornar, consultar consolidado, ver métricas e logs
-- [ ] Um serviço fora do ar aparece como fora, sem derrubar o painel nem o terminal
-- [ ] Suíte verde
+- [x] `./start.sh` sobe a stack do zero, roda a suíte e termina com o painel de URLs e a saúde de cada serviço — executado em 2026-11-19: portas livres, 133/133, 8/8 serviços saudáveis, painel
+- [x] `./start.sh demo` executa o fluxo ponta a ponta (lançar → outbox → Kafka → consolidado → estorno → idempotência) narrando cada passo — executado contra a stack: projeção via Kafka, estorno e idempotência confirmados
+- [x] O painel Infraestrutura do front mostra saúde, métricas e logs reais da stack — `InfraestruturaTests`, `evidencias/01-painel-infraestrutura.png`
+- [x] A UI de terminal faz lançar, estornar, consultar consolidado, ver métricas e logs — `TelaLancarTests`, `TelaLancamentosTests`, `TelaConsolidadoTests`, `TelasDeInfraestruturaTests`; escrita real na demo
+- [x] Um serviço fora do ar aparece como fora, sem derrubar o painel nem o terminal — `TelaConsolidadoTests.Servico_fora_*`, `TelasDeInfraestruturaTests.*_com_*_fora_*`
+- [x] Suíte verde — `dotnet test`: 133/133 em 2026-11-19
 
 ## Fases
 
@@ -34,5 +34,5 @@ Diferencial para a banca: uma experiência que prova que **toda** a infraestrutu
 - [x] research — `research.md` (Research #0003, stack local)
 - [x] prd — `prd.md` (PRD-0004) · ADR-0011
 - [x] slices — `slices/README.md` (S1–S3)
-- [ ] coder
-- [ ] verify
+- [x] coder — S1 `cba6e2c`, S2 `be73de8`, S3 `3bd7fd8`
+- [x] verify — 133/133; `./start.sh` do zero e demo contra a stack em 2026-11-19
