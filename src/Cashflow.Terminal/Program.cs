@@ -22,11 +22,7 @@ var elasticsearchUrl = Env("CASHFLOW_ELASTICSEARCH_URL", "http://localhost:9200"
 var comerciante = Guid.Parse(Env("CASHFLOW_COMERCIANTE_ID", "7c9e6679-7425-40de-944b-e07fc1f90ae7"));
 
 var comando = args.FirstOrDefault();
-var perfil = comando == "demo"
-    ? Perfis.Operador
-    : console.Prompt(new TextPrompt<int>("Perfil — 1 operador · 2 consulta [1]: ").DefaultValue(1)) == 2
-        ? Perfis.Consulta
-        : Perfis.Operador;
+var perfil = comando == "demo" ? Perfis.Operador : SelecaoDePerfil.Escolher(console);
 
 HttpClient Cliente(string url, TimeSpan? prazo = null)
 {

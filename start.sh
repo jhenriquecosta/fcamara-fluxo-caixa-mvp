@@ -7,7 +7,7 @@
 #
 # ./start.sh                  → up (padrão): pré-requisitos, suíte, stack, saúde, ELK, painel
 # ./start.sh up [--sem-testes] → sobe a stack; --sem-testes pula a suíte
-# ./start.sh test             → roda a suíte e mostra o resumo
+# ./start.sh test             → roda a suíte e mostra cada teste ao passar
 # ./start.sh demo             → o roteiro narrado no terminal (RF3)
 # ./start.sh terminal         → a UI de terminal (RF4/RF5)
 # ./start.sh status           → o estado da stack e a saúde de cada serviço
@@ -78,6 +78,45 @@ roda_suite() {
     falha "suíte vermelha — corrija antes de subir"
     exit 1
   fi
+}
+
+comando_test() {
+  titulo "Build"
+  if ! dotnet build Cashflow.slnx; then
+    falha "build vermelho"
+    exit 1
+  fi
+  ok "build verde"
+
+  titulo "Testes — cada teste, na ordem em que passa"
+  local projetos=0 falhas=0 projeto nome
+  while IFS= read -r projeto; do
+    projetos=$((projetos + 1))
+    nome="$(basename "$(dirname "$projeto")")"
+    printf '\n%s%s%s\n' "$NEGRITO" "$nome" "$ZERO"
+    if dotnet run --project "$projeto" --no-build -- -reporter verbose; then
+      ok "$nome"
+    else
+      falha "$nome"
+      falhas=$((falhas + 1))
+    fi
+  done < <(listar_projetos_de_teste)
+
+  if ((falhas)); then
+    falha "$falhas projeto(s) com teste vermelho"
+    exit 1
+  fi
+  ok "suíte verde em $projetos projeto(s)"
+}
+
+# Projetos de teste: os executáveis que referenciam xunit (Cashflow.Testing é biblioteca, não roda).
+listar_projetos_de_teste() {
+  local projeto
+  for projeto in tests/*/*.csproj; do
+    if grep -q 'xunit' "$projeto" 2>/dev/null && grep -q '<OutputType>Exe</OutputType>' "$projeto" 2>/dev/null; then
+      printf '%s\n' "$projeto"
+    fi
+  done | sort
 }
 
 sobe_stack() {
@@ -197,7 +236,7 @@ comando_down() {
 
 case "${1:-up}" in
   up)       if (($#)); then shift; fi; comando_up "$@" ;;
-  test)     roda_suite ;;
+  test)     comando_test ;;
   demo)     comando_demo ;;
   terminal) comando_terminal ;;
   status)   comando_status ;;

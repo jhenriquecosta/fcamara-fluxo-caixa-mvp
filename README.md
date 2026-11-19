@@ -30,7 +30,7 @@ Um comando faz o ciclo inteiro — pré-requisitos, suíte, stack, saúde, ELK e
 ./start.sh               # up: pré-requisitos → suíte → stack → saúde → ELK → painel (--sem-testes pula a suíte)
 ./start.sh demo          # o roteiro narrado: lançar → outbox → Kafka → consolidado → estorno → idempotência
 ./start.sh terminal      # a UI de terminal (menu por perfil: operador ou consulta)
-./start.sh test          # a suíte, com o resumo por projeto
+./start.sh test          # a suíte, com cada teste aparecendo ao passar
 ./start.sh status        # o estado da stack e a saúde de cada serviço
 ./start.sh logs web      # os logs de um serviço (sem argumento: todos)
 ./start.sh down          # derruba a stack (volumes só com --volumes)
