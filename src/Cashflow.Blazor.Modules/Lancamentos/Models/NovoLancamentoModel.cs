@@ -8,14 +8,17 @@ namespace Cashflow.Blazor.Modules.Lancamentos.Models;
 /// </summary>
 public sealed class NovoLancamentoModel
 {
+    /// <summary>O valor, sempre positivo; o tipo decide se entra ou sai.</summary>
     [Required(ErrorMessage = "Informe o valor.")]
     [Range(typeof(decimal), "0.01", "999999999.99", ErrorMessage = "O valor deve ser maior que zero.")]
     public decimal? Valor { get; set; }
 
+    /// <summary><c>credito</c> ou <c>debito</c>, como o contrato da API.</summary>
     [Required(ErrorMessage = "Escolha crédito ou débito.")]
     [RegularExpression("^(credito|debito)$", ErrorMessage = "Escolha crédito ou débito.")]
     public string Tipo { get; set; } = "credito";
 
+    /// <summary>Texto livre opcional.</summary>
     [StringLength(200, ErrorMessage = "A descrição tem no máximo 200 caracteres.")]
     public string? Descricao { get; set; }
 }

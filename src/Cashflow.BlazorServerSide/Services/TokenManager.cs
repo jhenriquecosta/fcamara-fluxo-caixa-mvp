@@ -15,6 +15,7 @@ public sealed class TokenManager(
 {
     private TokenModel? _atual;
 
+    /// <inheritdoc />
     public async Task<TokenModel> GetTokenAsync(CancellationToken cancellationToken = default)
     {
         if (_atual is { } token && !token.ExpiraAntesDe(timeProvider.GetUtcNow()))

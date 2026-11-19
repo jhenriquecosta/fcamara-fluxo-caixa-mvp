@@ -14,6 +14,7 @@ public sealed class UsuarioStore(AppSettings settings)
     /// <summary>Hash de uma senha qualquer: usuário inexistente custa o mesmo PBKDF2 que um existente.</summary>
     private static readonly string HashFicticio = Hasher.HashPassword(new UsuarioOptions(), Guid.NewGuid().ToString());
 
+    /// <summary>O usuário, se a senha confere e o perfil é válido; senão nulo.</summary>
     public UsuarioOptions? Autenticar(string? usuario, string? senha)
     {
         if (string.IsNullOrWhiteSpace(usuario) || string.IsNullOrEmpty(senha))

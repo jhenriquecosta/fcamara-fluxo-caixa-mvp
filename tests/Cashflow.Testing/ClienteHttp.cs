@@ -6,8 +6,10 @@ using Xunit;
 
 namespace Cashflow.Testing;
 
+/// <summary>Atalhos de <see cref="HttpClient"/> para falar com as APIs como um comerciante.</summary>
 public static class ClienteHttp
 {
+    /// <summary>Põe o token do comerciante com o escopo pedido e, se informada, a <c>Idempotency-Key</c>.</summary>
     public static HttpClient Autenticado(this HttpClient client, Guid comerciante, string escopo, string? chave = null)
     {
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(

@@ -7,8 +7,13 @@ using OpenTelemetry;
 
 namespace Cashflow.Infrastructure.Web;
 
+/// <summary>Os endpoints operacionais que todo host expõe, independentemente dos módulos ligados.</summary>
 public static class CashflowEndpoints
 {
+    /// <summary>
+    /// <c>/health</c> para o orquestrador, <c>/metrics</c> para o Prometheus e, só em
+    /// <c>Development</c>, <c>/dev/token</c> para o demo emitir um JWT local.
+    /// </summary>
     public static WebApplication MapCashflowEndpoints(this WebApplication app)
     {
         app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();

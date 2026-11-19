@@ -9,13 +9,17 @@ namespace Cashflow.Blazor.Modules.Core.Components;
 /// </summary>
 public abstract class PaginaBase : ComponentBase
 {
+    /// <summary>Para levar ao login quando a sessão expira.</summary>
     [Inject]
     public NavigationManager NavManager { get; set; } = default!;
 
+    /// <summary>A mensagem de erro da última ação, pronta para o alerta.</summary>
     protected string? Erro { get; set; }
 
+    /// <summary>Há uma ação em andamento: os botões ficam desabilitados.</summary>
     protected bool Ocupado { get; private set; }
 
+    /// <summary>Executa a ação traduzindo os erros da API: 401 vai ao login, o resto vira <see cref="Erro"/>.</summary>
     protected async Task ExecutarAsync(Func<Task> acao)
     {
         Erro = null;

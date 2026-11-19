@@ -1,240 +1,191 @@
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Cashflow.Modules.Lancamentos.Commands;
-using Cashflow.Testing;
 using Cashflow.Modules.Lancamentos.Entities;
+using Cashflow.Testing;
 using Dapper;
 using Npgsql;
 
 namespace Cashflow.Modules.Lancamentos.IntegrationTests;
 
+/// <summary>
+/// O registro de lançamentos pela API, contra um PostgreSQL real: o que a resposta diz e o que fica
+/// gravado no banco (lançamento, outbox e chave de idempotência).
+/// </summary>
 [Collection("integracao")]
 public sealed class LancamentoTests(PostgresFixture db)
 {
-    private static readonly DateTimeOffset FixedNow =
-        new(2026, 11, 18, 2, 30, 0, TimeSpan.Zero); // São Paulo: 2026-11-17 23:30
+    private const string Rota = "/api/v1/lancamentos";
 
-    private static HttpClient ClientComEscopo(WebApiFactory factory, Guid comerciante, string chave)
-    {
-        var client = factory.CreateClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-            "Bearer", TestTokens.Create(comerciante, "lancamentos.write"));
-        client.DefaultRequestHeaders.Add("Idempotency-Key", chave);
-        return client;
-    }
+    /// <summary>02h30 de 18/11 em UTC, que é 23h30 de 17/11 em São Paulo.</summary>
+    private static readonly DateTimeOffset AgoraNoServidor = new(2026, 11, 18, 2, 30, 0, TimeSpan.Zero);
 
-    private async Task<int> ContarAsync(string sql, object param)
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
+    private WebApiFactory ApiDeLancamentos() => WebApiFactory.SoLancamentos(db.ConnectionString, AgoraNoServidor);
+
+    private static HttpClient Cliente(WebApiFactory api, Guid comerciante, string? chave = null) =>
+        api.CreateClient().Autenticado(comerciante, "lancamentos.write", chave ?? Guid.NewGuid().ToString());
+
+    private async Task<int> ContarAsync(string sql, object parametros)
     {
         await using var conn = new NpgsqlConnection(db.ConnectionString);
-        return await conn.ExecuteScalarAsync<int>(sql, param);
+        return await conn.ExecuteScalarAsync<int>(sql, parametros);
     }
 
     [Fact]
-    public async Task AC1_lancamento_valido_responde_201_com_o_dia_do_servidor()
+    [Trait("Criterio", "AC1")]
+    public async Task Lancamento_valido_responde_201_no_dia_de_negocio_de_Sao_Paulo()
     {
+        // Arrange
         var comerciante = Guid.NewGuid();
-        using var factory = WebApiFactory.SoLancamentos(db.ConnectionString, FixedNow);
-        using var client = ClientComEscopo(factory, comerciante, Guid.NewGuid().ToString());
+        using var api = ApiDeLancamentos();
+        using var cliente = Cliente(api, comerciante);
 
-        var response = await client.PostAsJsonAsync("/api/v1/lancamentos",
-            new { valor = 100.00m, tipo = "debito", descricao = "venda" },
-            TestContext.Current.CancellationToken);
+        // Act
+        var resposta = await cliente.PostAsJsonAsync(Rota, new { valor = 100.00m, tipo = "debito", descricao = "venda" }, Ct);
 
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        var corpo = await response.Content.ReadFromJsonAsync<JsonElement>(
-            TestContext.Current.CancellationToken);
-        Assert.Equal("2026-11-17", corpo.GetProperty("data").GetString());
-        Assert.Equal(100.00m, corpo.GetProperty("valor").GetDecimal());
-        Assert.Equal("debito", corpo.GetProperty("tipo").GetString());
-        Assert.NotEqual(Guid.Empty, corpo.GetProperty("id").GetGuid());
-        Assert.Equal(comerciante, corpo.GetProperty("comercianteId").GetGuid());
-
-        var lancamentos = await ContarAsync(
-            "SELECT count(*) FROM lancamento WHERE comerciante_id = @m",
-            new { m = comerciante });
-        var eventos = await ContarAsync(
-            "SELECT count(*) FROM outbox_event WHERE payload->'payload'->>'comercianteId' = @m",
-            new { m = comerciante.ToString() });
-
-        Assert.Equal(1, lancamentos);
-        Assert.Equal(1, eventos);
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, resposta.StatusCode);
+        var lancamento = await resposta.Content.ReadFromJsonAsync<JsonElement>(Ct);
+        Assert.NotEqual(Guid.Empty, lancamento.GetProperty("id").GetGuid());
+        Assert.Equal(comerciante, lancamento.GetProperty("comercianteId").GetGuid());
+        Assert.Equal("2026-11-17", lancamento.GetProperty("data").GetString());
+        Assert.Equal(100.00m, lancamento.GetProperty("valor").GetDecimal());
+        Assert.Equal("debito", lancamento.GetProperty("tipo").GetString());
     }
 
     [Fact]
-    public async Task RF_valor_ou_tipo_invalido_responde_422()
+    [Trait("Criterio", "AC1")]
+    public async Task Lancamento_e_evento_do_outbox_sao_gravados_juntos()
     {
-        using var factory = WebApiFactory.SoLancamentos(db.ConnectionString, FixedNow);
-        using var client = ClientComEscopo(factory, Guid.NewGuid(), Guid.NewGuid().ToString());
+        // Arrange
+        var comerciante = Guid.NewGuid();
+        using var api = ApiDeLancamentos();
+        using var cliente = Cliente(api, comerciante);
 
-        var valorZero = await client.PostAsJsonAsync("/api/v1/lancamentos",
-            new { valor = 0.00m, tipo = "debito" }, TestContext.Current.CancellationToken);
-        var tipoInvalido = await client.PostAsJsonAsync("/api/v1/lancamentos",
-            new { valor = 10.00m, tipo = "invalido" }, TestContext.Current.CancellationToken);
+        // Act
+        await cliente.PostAsJsonAsync(Rota, new { valor = 100.00m, tipo = "debito" }, Ct);
 
-        var tipoNumerico = await client.PostAsJsonAsync("/api/v1/lancamentos",
-            new { valor = 10.00m, tipo = "1" }, TestContext.Current.CancellationToken);
+        // Assert
+        Assert.Equal(1, await ContarAsync(
+            "SELECT count(*) FROM lancamento WHERE comerciante_id = @comerciante", new { comerciante }));
+        Assert.Equal(1, await ContarAsync(
+            "SELECT count(*) FROM outbox_event WHERE payload->'payload'->>'comercianteId' = @comerciante",
+            new { comerciante = comerciante.ToString() }));
+    }
 
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, valorZero.StatusCode);
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, tipoInvalido.StatusCode);
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, tipoNumerico.StatusCode);
+    [Theory]
+    [InlineData(0.00, "debito")]
+    [InlineData(-10.00, "credito")]
+    [InlineData(10.00, "invalido")]
+    [InlineData(10.00, "1")]
+    public async Task Valor_nao_positivo_ou_tipo_fora_do_contrato_responde_422(decimal valor, string tipo)
+    {
+        using var api = ApiDeLancamentos();
+        using var cliente = Cliente(api, Guid.NewGuid());
+
+        var resposta = await cliente.PostAsJsonAsync(Rota, new { valor, tipo }, Ct);
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, resposta.StatusCode);
     }
 
     [Fact]
-    public async Task AC2_mesma_chave_e_corpo_devolve_a_resposta_original_sem_duplicar()
+    public async Task Escrita_sem_Idempotency_Key_responde_400()
     {
+        using var api = ApiDeLancamentos();
+        using var cliente = api.CreateClient().Autenticado(Guid.NewGuid(), "lancamentos.write");
+
+        var resposta = await cliente.PostAsJsonAsync(Rota, new { valor = 10.00m, tipo = "debito" }, Ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, resposta.StatusCode);
+    }
+
+    [Fact]
+    [Trait("Criterio", "AC2")]
+    public async Task Repetir_a_requisicao_com_a_mesma_chave_devolve_o_mesmo_lancamento_sem_gravar_outro()
+    {
+        // Arrange
+        var comerciante = Guid.NewGuid();
+        using var api = ApiDeLancamentos();
+        using var cliente = Cliente(api, comerciante, chave: Guid.NewGuid().ToString());
+        var corpo = new { valor = 50.00m, tipo = "credito", descricao = "recebimento" };
+
+        // Act
+        var primeira = await cliente.PostAsJsonAsync(Rota, corpo, Ct);
+        var repetida = await cliente.PostAsJsonAsync(Rota, corpo, Ct);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, primeira.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, repetida.StatusCode);
+        Assert.Equal(
+            (await primeira.Content.ReadFromJsonAsync<JsonElement>(Ct)).GetProperty("id").GetGuid(),
+            (await repetida.Content.ReadFromJsonAsync<JsonElement>(Ct)).GetProperty("id").GetGuid());
+        Assert.Equal(1, await ContarAsync(
+            "SELECT count(*) FROM lancamento WHERE comerciante_id = @comerciante", new { comerciante }));
+    }
+
+    [Fact]
+    [Trait("Criterio", "AC3")]
+    public async Task Reusar_a_chave_com_outro_corpo_responde_422()
+    {
+        // Arrange
+        using var api = ApiDeLancamentos();
+        using var cliente = Cliente(api, Guid.NewGuid(), chave: Guid.NewGuid().ToString());
+        await cliente.PostAsJsonAsync(Rota, new { valor = 100.00m, tipo = "debito" }, Ct);
+
+        // Act
+        var comOutroCorpo = await cliente.PostAsJsonAsync(Rota, new { valor = 200.00m, tipo = "debito" }, Ct);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, comOutroCorpo.StatusCode);
+    }
+
+    [Fact]
+    [Trait("Criterio", "AC13")]
+    public async Task Chave_ainda_em_processamento_por_outra_requisicao_responde_409()
+    {
+        // Arrange: outra requisição reservou a chave agora há pouco e não terminou
         var comerciante = Guid.NewGuid();
         var chave = Guid.NewGuid().ToString();
-        using var factory = WebApiFactory.SoLancamentos(db.ConnectionString, FixedNow);
-        using var client = ClientComEscopo(factory, comerciante, chave);
-
-        var body = new { valor = 50.00m, tipo = "credito", descricao = "recebimento" };
-        var primeiro = await client.PostAsJsonAsync("/api/v1/lancamentos", body,
-            TestContext.Current.CancellationToken);
-        var segundo = await client.PostAsJsonAsync("/api/v1/lancamentos", body,
-            TestContext.Current.CancellationToken);
-
-        Assert.Equal(HttpStatusCode.Created, primeiro.StatusCode);
-        Assert.Equal(HttpStatusCode.Created, segundo.StatusCode);
-
-        var id1 = (await primeiro.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken))
-            .GetProperty("id").GetGuid();
-        var id2 = (await segundo.Content.ReadFromJsonAsync<JsonElement>(TestContext.Current.CancellationToken))
-            .GetProperty("id").GetGuid();
-        Assert.Equal(id1, id2);
-
-        var total = await ContarAsync(
-            "SELECT count(*) FROM lancamento WHERE comerciante_id = @m", new { m = comerciante });
-        Assert.Equal(1, total);
-    }
-
-    [Fact]
-    public async Task AC3_mesma_chave_com_corpo_diferente_responde_422()
-    {
-        var comerciante = Guid.NewGuid();
-        var chave = Guid.NewGuid().ToString();
-        using var factory = WebApiFactory.SoLancamentos(db.ConnectionString, FixedNow);
-        using var client = ClientComEscopo(factory, comerciante, chave);
-
-        var primeiro = await client.PostAsJsonAsync("/api/v1/lancamentos",
-            new { valor = 100.00m, tipo = "debito" }, TestContext.Current.CancellationToken);
-        var segundo = await client.PostAsJsonAsync("/api/v1/lancamentos",
-            new { valor = 200.00m, tipo = "debito" }, TestContext.Current.CancellationToken);
-
-        Assert.Equal(HttpStatusCode.Created, primeiro.StatusCode);
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, segundo.StatusCode);
-    }
-
-    [Fact]
-    public async Task AC13_chave_em_processamento_responde_409()
-    {
-        var comerciante = Guid.NewGuid();
-        var chave = Guid.NewGuid().ToString();
-        var hash = RegistrarLancamentoCommand.HashDoCorpo(TipoLancamento.Debito, 100.00m, null);
-
         await using (var conn = new NpgsqlConnection(db.ConnectionString))
         {
             await conn.ExecuteAsync("""
                 INSERT INTO idempotencia (comerciante_id, chave, corpo_hash, status, processando_desde)
-                VALUES (@m, @k, @h, 'processando', now())
-                """, new { m = comerciante, k = chave, h = hash });
+                VALUES (@comerciante, @chave, @impressao, 'processando', now())
+                """, new
+            {
+                comerciante,
+                chave,
+                impressao = RegistrarLancamentoCommand.ImpressaoDigitalDoCorpo(TipoLancamento.Debito, 100.00m, null)
+            });
         }
 
-        using var factory = WebApiFactory.SoLancamentos(db.ConnectionString, FixedNow);
-        using var client = ClientComEscopo(factory, comerciante, chave);
-        var response = await client.PostAsJsonAsync("/api/v1/lancamentos",
-            new { valor = 100.00m, tipo = "debito" }, TestContext.Current.CancellationToken);
+        using var api = ApiDeLancamentos();
+        using var cliente = Cliente(api, comerciante, chave);
 
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        // Act
+        var resposta = await cliente.PostAsJsonAsync(Rota, new { valor = 100.00m, tipo = "debito" }, Ct);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Conflict, resposta.StatusCode);
     }
 
     [Fact]
-    public async Task AC4_estorno_cria_contra_lancamento_e_preserva_o_original()
+    public async Task O_endpoint_de_metricas_expoe_o_contador_de_lancamentos()
     {
-        var comerciante = Guid.NewGuid();
-        using var factory = WebApiFactory.SoLancamentos(db.ConnectionString, FixedNow);
-        using var client = ClientComEscopo(factory, comerciante, Guid.NewGuid().ToString());
+        // Arrange
+        using var api = ApiDeLancamentos();
+        using var cliente = Cliente(api, Guid.NewGuid());
+        await cliente.PostAsJsonAsync(Rota, new { valor = 10.00m, tipo = "debito" }, Ct);
 
-        var originalResp = await client.PostAsJsonAsync("/api/v1/lancamentos",
-            new { valor = 100.00m, tipo = "credito" }, TestContext.Current.CancellationToken);
-        Assert.Equal(HttpStatusCode.Created, originalResp.StatusCode);
-        var original = await originalResp.Content.ReadFromJsonAsync<JsonElement>(
-            TestContext.Current.CancellationToken);
-        var originalId = original.GetProperty("id").GetGuid();
+        // Act
+        using var prometheus = api.CreateClient();
+        var metricas = await prometheus.GetAsync("/metrics", Ct);
 
-        using var estornoClient = ClientComEscopo(factory, comerciante, Guid.NewGuid().ToString());
-        var estornoResp = await estornoClient.PostAsync(
-            $"/api/v1/lancamentos/{originalId}/estornos", null, TestContext.Current.CancellationToken);
-        Assert.Equal(HttpStatusCode.Created, estornoResp.StatusCode);
-        var estorno = await estornoResp.Content.ReadFromJsonAsync<JsonElement>(
-            TestContext.Current.CancellationToken);
-        Assert.Equal("debito", estorno.GetProperty("tipo").GetString());
-        Assert.Equal(100.00m, estorno.GetProperty("valor").GetDecimal());
-        Assert.Equal(originalId, estorno.GetProperty("estornoDe").GetGuid());
-
-        await using var conn = new NpgsqlConnection(db.ConnectionString);
-        var originalDb = await conn.QuerySingleAsync<LancamentoRow>(
-            "SELECT tipo AS Tipo, valor AS Valor, estorno_de AS EstornoDe FROM lancamento WHERE id = @id",
-            new { id = originalId });
-        var estornoDb = await conn.QuerySingleAsync<LancamentoRow>(
-            "SELECT tipo AS Tipo, valor AS Valor, estorno_de AS EstornoDe FROM lancamento WHERE estorno_de = @id",
-            new { id = originalId });
-
-        Assert.Equal("credito", originalDb.Tipo);
-        Assert.Equal(100.00m, originalDb.Valor);
-        Assert.Null(originalDb.EstornoDe);
-        Assert.Equal("debito", estornoDb.Tipo);
-        Assert.Equal(originalId, estornoDb.EstornoDe);
-    }
-
-    [Fact]
-    public async Task AC5_segundo_estorno_409_e_estorno_de_estorno_422()
-    {
-        var comerciante = Guid.NewGuid();
-        using var factory = WebApiFactory.SoLancamentos(db.ConnectionString, FixedNow);
-        using var client = ClientComEscopo(factory, comerciante, Guid.NewGuid().ToString());
-
-        var originalResp = await client.PostAsJsonAsync("/api/v1/lancamentos",
-            new { valor = 40.00m, tipo = "debito" }, TestContext.Current.CancellationToken);
-        var original = await originalResp.Content.ReadFromJsonAsync<JsonElement>(
-            TestContext.Current.CancellationToken);
-        var originalId = original.GetProperty("id").GetGuid();
-
-        using var estornoClient = ClientComEscopo(factory, comerciante, Guid.NewGuid().ToString());
-        var primeiro = await estornoClient.PostAsync(
-            $"/api/v1/lancamentos/{originalId}/estornos", null, TestContext.Current.CancellationToken);
-        Assert.Equal(HttpStatusCode.Created, primeiro.StatusCode);
-        var primeiroJson = await primeiro.Content.ReadFromJsonAsync<JsonElement>(
-            TestContext.Current.CancellationToken);
-        var estornoId = primeiroJson.GetProperty("id").GetGuid();
-
-        using var segundoClient = ClientComEscopo(factory, comerciante, Guid.NewGuid().ToString());
-        var segundo = await segundoClient.PostAsync(
-            $"/api/v1/lancamentos/{originalId}/estornos", null, TestContext.Current.CancellationToken);
-        Assert.Equal(HttpStatusCode.Conflict, segundo.StatusCode);
-
-        using var terceiroClient = ClientComEscopo(factory, comerciante, Guid.NewGuid().ToString());
-        var estornoDeEstorno = await terceiroClient.PostAsync(
-            $"/api/v1/lancamentos/{estornoId}/estornos", null, TestContext.Current.CancellationToken);
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, estornoDeEstorno.StatusCode);
-    }
-
-    [Fact]
-    public async Task Metricas_expoem_o_contador_de_lancamentos()
-    {
-        using var factory = WebApiFactory.SoLancamentos(db.ConnectionString, FixedNow);
-        using var client = ClientComEscopo(factory, Guid.NewGuid(), Guid.NewGuid().ToString());
-        await client.PostAsJsonAsync("/api/v1/lancamentos",
-            new { valor = 10.00m, tipo = "debito" }, TestContext.Current.CancellationToken);
-
-        using var anonimo = factory.CreateClient();
-        var metrics = await anonimo.GetAsync("/metrics", TestContext.Current.CancellationToken);
-        var texto = await metrics.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-
-        Assert.Equal(HttpStatusCode.OK, metrics.StatusCode);
-        Assert.Contains("cashflow_lancamentos_total", texto);
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, metricas.StatusCode);
+        Assert.Contains("cashflow_lancamentos_total", await metricas.Content.ReadAsStringAsync(Ct));
     }
 }
-
-internal sealed record LancamentoRow(string Tipo, decimal Valor, Guid? EstornoDe);

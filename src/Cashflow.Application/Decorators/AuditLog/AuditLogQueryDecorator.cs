@@ -3,12 +3,17 @@ using Microsoft.Extensions.Logging;
 
 namespace Cashflow.Application.Decorators.AuditLog;
 
+/// <summary>
+/// Registra a consulta executada e quanto levou, em nível Debug: consulta é volume alto
+/// (o consolidado sustenta 50 req/s) e não muda estado.
+/// </summary>
 [Mapping(Type = typeof(AuditLogAttribute))]
 public sealed class AuditLogQueryDecorator<TQuery, TResult>(
     IQueryHandler<TQuery, TResult> handler,
     ILogger<AuditLogQueryDecorator<TQuery, TResult>> logger) : IQueryHandler<TQuery, TResult>
     where TQuery : IQuery<TResult>
 {
+    /// <inheritdoc />
     public async Task<TResult> HandleAsync(TQuery query, CancellationToken cancellationToken = default)
     {
         var inicio = Stopwatch.GetTimestamp();

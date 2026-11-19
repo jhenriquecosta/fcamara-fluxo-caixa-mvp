@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace Cashflow.Blazor.Modules.Lancamentos.Pages;
 
+/// <summary>Os lançamentos de um dia, com o estorno para quem pode lançar.</summary>
 public partial class List
 {
     /// <summary>
@@ -15,22 +16,24 @@ public partial class List
     private readonly Dictionary<Guid, string> _chavesDeEstorno = new();
 
     [Inject]
-    public LancamentoService LancamentoService { get; set; } = default!;
+    private LancamentoService LancamentoService { get; set; } = default!;
 
     [Inject]
-    public DiaDeNegocio DiaDeNegocio { get; set; } = default!;
+    private DiaDeNegocio DiaDeNegocio { get; set; } = default!;
 
-    protected ConfirmDialog EstornoDialog { get; set; } = default!;
+    private ConfirmDialog EstornoDialog { get; set; } = default!;
 
-    protected DateOnly Dia { get; private set; }
+    private DateOnly Dia { get; set; }
 
-    protected List<LancamentoModel>? Lancamentos { get; private set; }
+    private List<LancamentoModel>? Lancamentos { get; set; }
 
-    protected LancamentoModel? Estornando { get; private set; }
+    private LancamentoModel? Estornando { get; set; }
 
-    protected string? Sucesso { get; set; }
+    private string? Sucesso { get; set; }
 
-    protected decimal Movimento => Lancamentos?.Sum(l => l.Efeito) ?? 0m;
+    private decimal Movimento => Lancamentos?.Sum(l => l.Efeito) ?? 0m;
+
+    /// <inheritdoc />
 
     protected override async Task OnInitializedAsync()
     {
@@ -38,10 +41,10 @@ public partial class List
         await CarregarAsync();
     }
 
-    protected async Task CarregarAsync() =>
+    private async Task CarregarAsync() =>
         await ExecutarAsync(async () => Lancamentos = await LancamentoService.ListarAsync(Dia));
 
-    protected async Task TrocarDiaAsync(ChangeEventArgs e)
+    private async Task TrocarDiaAsync(ChangeEventArgs e)
     {
         if (DateOnly.TryParse(e.Value?.ToString(), out var dia))
         {
@@ -51,14 +54,14 @@ public partial class List
         }
     }
 
-    protected void PedirEstorno(LancamentoModel lancamento)
+    private void PedirEstorno(LancamentoModel lancamento)
     {
         Estornando = lancamento;
         Sucesso = null;
         EstornoDialog.Mostrar();
     }
 
-    protected async Task ConfirmarEstornoAsync()
+    private async Task ConfirmarEstornoAsync()
     {
         if (Estornando is not { } alvo)
             return;

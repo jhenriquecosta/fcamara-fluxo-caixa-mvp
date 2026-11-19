@@ -16,7 +16,9 @@ namespace Cashflow.BlazorServerSide.IntegrationTests;
 public sealed class PontaAPontaTests(PostgresFixture db)
 {
     [Fact]
-    public async Task AC3_AC4_lanca_lista_e_estorna_pela_ui()
+    [Trait("Criterio", "AC3")]
+    [Trait("Criterio", "AC4")]
+    public async Task Lancado_pela_tela_aparece_na_lista_e_o_estorno_marca_o_original()
     {
         await using var api = new WebApiFactory(db.ConnectionString);
         await using var front = new FrontendFactory(() => api.Server.CreateHandler());
@@ -37,7 +39,9 @@ public sealed class PontaAPontaTests(PostgresFixture db)
         Assert.Equal(repetida.Id, reenvio.Id);
         var lista = await lancamentos.ListarAsync(venda.Data, ct);
         Assert.Contains(lista, l => l.Id == venda.Id && l.PodeEstornar);
-        Assert.Equal(2, lista.Count);
+        // O comerciante de teste é compartilhado entre os testes da assembly (mesmo dia, mesmo
+        // banco): conta-se só o que este teste criou, nunca o total do dia.
+        Assert.Equal(2, lista.Count(l => l.Id == venda.Id || l.Id == repetida.Id));
 
         var estorno = await lancamentos.EstornarAsync(venda.Id, Guid.NewGuid().ToString(), ct);
 
@@ -50,7 +54,8 @@ public sealed class PontaAPontaTests(PostgresFixture db)
     }
 
     [Fact]
-    public async Task AC2_a_api_recusa_o_perfil_consulta_mesmo_se_a_tela_chamar()
+    [Trait("Criterio", "AC2")]
+    public async Task A_api_recusa_o_perfil_consulta_mesmo_que_a_tela_chame()
     {
         await using var api = new WebApiFactory(db.ConnectionString);
         await using var front = new FrontendFactory(() => api.Server.CreateHandler());
@@ -66,7 +71,8 @@ public sealed class PontaAPontaTests(PostgresFixture db)
     }
 
     [Fact]
-    public async Task AC5_consolidado_do_dia_tem_saldo_do_dia_anterior_e_acumulado()
+    [Trait("Criterio", "AC5")]
+    public async Task Consolidado_do_dia_traz_saldo_do_dia_anterior_e_acumulado()
     {
         await using var api = new WebApiFactory(db.ConnectionString);
         await using var front = new FrontendFactory(() => api.Server.CreateHandler());
@@ -82,7 +88,8 @@ public sealed class PontaAPontaTests(PostgresFixture db)
     }
 
     [Fact]
-    public async Task AC3_a_tela_de_lancamentos_renderiza_o_que_a_api_devolve()
+    [Trait("Criterio", "AC3")]
+    public async Task A_tela_de_lancamentos_renderiza_o_que_a_api_devolve()
     {
         await using var api = new WebApiFactory(db.ConnectionString);
         await using var front = new FrontendFactory(() => api.Server.CreateHandler());

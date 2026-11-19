@@ -6,10 +6,16 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Cashflow.Infrastructure.Security;
 
+/// <summary>O pedido de token do ambiente de desenvolvimento: o comerciante e, opcionalmente, os escopos.</summary>
 public sealed record DevTokenRequest(Guid ComercianteId, string[]? Scopes);
 
+/// <summary>
+/// Emite um JWT local para o demo e os testes manuais. Só existe em <c>Development</c>: em produção quem
+/// emite o token é o provedor de identidade, e a API apenas o valida.
+/// </summary>
 public static class DevToken
 {
+    /// <summary>Um token de 8 horas com o <c>comercianteId</c> e os escopos, assinado com a chave configurada.</summary>
     public static string Create(IConfiguration configuration, Guid comercianteId, string[] scopes)
     {
         var key = new SymmetricSecurityKey(
