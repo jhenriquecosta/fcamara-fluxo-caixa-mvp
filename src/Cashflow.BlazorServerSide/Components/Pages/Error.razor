@@ -1,0 +1,25 @@
+@page "/Error"
+@attribute [AllowAnonymous]
+@layout LoginLayout
+@using System.Diagnostics
+
+<PageTitle>Erro · Fluxo de Caixa</PageTitle>
+
+<div class="login-card">
+    <h1 class="h4 text-danger">Ocorreu um erro.</h1>
+    <p>Não foi possível concluir a requisição.</p>
+    @if (RequestId is not null)
+    {
+        <p class="small text-muted">Código para o suporte: <code>@RequestId</code></p>
+    }
+</div>
+
+@code {
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    private string? RequestId { get; set; }
+
+    protected override void OnInitialized() =>
+        RequestId = Activity.Current?.Id ?? HttpContext?.TraceIdentifier;
+}

@@ -123,6 +123,31 @@ services:
       elasticsearch:
         condition: service_started
 
+  # O frontend (ADR-0010): mais um cliente da API, com um endereço por serviço — com o
+  # consolidado fora, as telas de lançamento seguem funcionando. Usuários de demo no
+  # appsettings.Development.json (senhas só em hash); o token de acesso não sai do servidor.
+  web:
+    build:
+      context: .
+      dockerfile: src/Cashflow.BlazorServerSide/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ServiceName: web
+      ResourceServer__Lancamentos: http://lancamentos-api:8080
+      ResourceServer__Consolidado: http://consolidado-api:8080
+      Auth__Issuer: cashflow-local
+      Auth__Audience: cashflow-api
+      Auth__SigningKey: dev-only-signing-key-change-me-32-chars-min
+      Serilog__ElasticsearchUrl: http://elasticsearch:9200
+    ports:
+      - "8090:8080"
+    depends_on:
+      lancamentos-api:
+        condition: service_started
+      consolidado-api:
+        condition: service_started
+
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
     environment:

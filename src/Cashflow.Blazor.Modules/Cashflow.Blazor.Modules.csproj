@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <!--
+    As telas e os clientes HTTP de cada módulo, como o ClassifiedAds.Blazor.Modules da referência.
+    Só conhece o contrato HTTP da API: não referencia Cashflow.Modules.*, Domain, Application nem
+    Infrastructure (ArchTest Frontend). O host injeta o ITokenManager.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Cashflow.Blazor.Modules</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

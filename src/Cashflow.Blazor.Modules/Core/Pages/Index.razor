@@ -1,0 +1,56 @@
+@page "/"
+@attribute [Authorize(Policy = Policies.PodeConsultar)]
+@inherits PaginaBase
+@using Cashflow.Blazor.Modules.Core
+@using Cashflow.Blazor.Modules.Consolidado.Models
+
+<PageTitle>Início · Fluxo de Caixa</PageTitle>
+
+<div class="page-header">
+    <div>
+        <p class="eyebrow">@Formatacao.Dia(Hoje)</p>
+        <h1>Olá, @Nome</h1>
+    </div>
+    <AuthorizeView Policy="@Policies.PodeLancar">
+        <a class="btn btn-primary" href="lancamentos/novo">+ Novo lançamento</a>
+    </AuthorizeView>
+</div>
+
+<Alerta Mensagem="@Erro" />
+
+<section aria-labelledby="hoje-titulo">
+    <h2 id="hoje-titulo" class="section-title">Consolidado de hoje</h2>
+    @if (Consolidado is null && Erro is null)
+    {
+        <p class="text-muted">Carregando…</p>
+    }
+    else if (Consolidado is not null)
+    {
+        <div class="saldo-grid">
+            <div class="saldo-card">
+                <span class="saldo-label">Saldo do dia</span>
+                <span class="saldo-valor @(Consolidado.SaldoDia < 0 ? "negativo" : "")">@Formatacao.Moeda(Consolidado.SaldoDia)</span>
+            </div>
+            <div class="saldo-card">
+                <span class="saldo-label">Saldo anterior</span>
+                <span class="saldo-valor">@Formatacao.Moeda(Consolidado.SaldoAnterior)</span>
+            </div>
+            <div class="saldo-card destaque">
+                <span class="saldo-label">Saldo acumulado</span>
+                <span class="saldo-valor @(Consolidado.SaldoAcumulado < 0 ? "negativo" : "")">@Formatacao.Moeda(Consolidado.SaldoAcumulado)</span>
+            </div>
+        </div>
+        <p class="nota">O consolidado é calculado a partir dos eventos de lançamento e reflete novos lançamentos em alguns segundos.</p>
+    }
+</section>
+
+<section class="atalhos" aria-label="Atalhos">
+    <a class="atalho" href="lancamentos">
+        <strong>Lançamentos do dia</strong>
+        <span>Liste, confira e estorne lançamentos.</span>
+    </a>
+    <a class="atalho" href="consolidado">
+        <strong>Consolidado por data</strong>
+        <span>Saldo do dia, anterior e acumulado de qualquer data.</span>
+    </a>
+</section>

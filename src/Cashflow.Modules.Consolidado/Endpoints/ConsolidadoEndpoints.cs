@@ -16,7 +16,9 @@ public static class ConsolidadoEndpoints
     /// <summary>As rotas do módulo, exigindo o escopo <c>consolidado.read</c>.</summary>
     public static IEndpointRouteBuilder MapConsolidadoEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapGet("/api/v1/consolidado/{data}", ConsultarDoDiaAsync).RequireAuthorization(Scopes.ConsolidadoRead);
+        app.MapGet("/api/v1/consolidado/{data}", ConsultarDoDiaAsync)
+            .RequireAuthorization(Scopes.ConsolidadoRead)
+            .ProducesProblem(StatusCodes.Status400BadRequest);
         return app;
     }
 
