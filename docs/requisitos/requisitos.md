@@ -7,7 +7,7 @@
 | **Autor** | ULTRON · skill ultron-prd — Operador: J Henrique Costa |
 | **Data** | 2026-11-18 |
 | **Versão do documento** | 1.3 |
-| **Status** | draft |
+| **Status** | accepted |
 | **Rastreabilidade** | Desafio técnico Carrefour (via FCamara) · repositório público · sem issue/task |
 
 > **Uma linha:** Dois serviços — Lançamentos e Consolidado — para o comerciante registrar débitos e créditos, estornar sem editar e consultar o saldo diário, com o registro de lançamentos disponível mesmo quando o consolidado cai.
