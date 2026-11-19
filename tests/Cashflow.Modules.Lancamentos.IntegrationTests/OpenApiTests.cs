@@ -94,16 +94,16 @@ public sealed class OpenApiTests(PostgresFixture db)
 
         var json = await DocumentoAsync(anonimo);
         foreach (var caminho in json.GetProperty("paths").EnumerateObject())
-        foreach (var operacao in caminho.Value.EnumerateObject())
-        {
-            var respostas = operacao.Value.GetProperty("responses");
-            var temSeguranca = operacao.Value.TryGetProperty("security", out var seguranca)
-                               && seguranca.GetArrayLength() > 0;
-            if (temSeguranca)
-                continue;
-            Assert.False(respostas.TryGetProperty("401", out _), $"{caminho.Name} {operacao.Name} declara 401 sem requisito");
-            Assert.False(respostas.TryGetProperty("403", out _), $"{caminho.Name} {operacao.Name} declara 403 sem requisito");
-        }
+            foreach (var operacao in caminho.Value.EnumerateObject())
+            {
+                var respostas = operacao.Value.GetProperty("responses");
+                var temSeguranca = operacao.Value.TryGetProperty("security", out var seguranca)
+                                   && seguranca.GetArrayLength() > 0;
+                if (temSeguranca)
+                    continue;
+                Assert.False(respostas.TryGetProperty("401", out _), $"{caminho.Name} {operacao.Name} declara 401 sem requisito");
+                Assert.False(respostas.TryGetProperty("403", out _), $"{caminho.Name} {operacao.Name} declara 403 sem requisito");
+            }
     }
 
     [Fact]
