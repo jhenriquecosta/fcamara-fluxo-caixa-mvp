@@ -6,12 +6,19 @@ using Microsoft.Extensions.Logging;
 
 namespace Cashflow.Modules.Lancamentos.HostedServices;
 
-/// <summary>Despacha o <see cref="PublishEventsCommand"/> em laço; o trabalho é do handler, como na referência.</summary>
+/// <summary>
+/// O relógio do outbox: despacha o <see cref="PublishEventsCommand"/> em laço, como na referência.
+/// Não tem regra; o trabalho é do handler. Roda no <c>BackgroundServer</c>, nunca na API.
+/// </summary>
 public sealed class PublishEventWorker(IServiceProvider services, ILogger<PublishEventWorker> logger) : BackgroundService
 {
-    private static readonly TimeSpan EsperaSemEventos = TimeSpan.FromMilliseconds(500);
+    /// <summary>Pausa quando o outbox está vazio, para não martelar o banco.</summary>
+    private static readonly TimeSpan EsperaComOutboxVazio = TimeSpan.FromMilliseconds(500);
+
+    /// <summary>Pausa depois de uma falha (broker ou banco fora), antes de tentar de novo.</summary>
     private static readonly TimeSpan EsperaAposFalha = TimeSpan.FromSeconds(1);
 
+    /// <summary>Publica lotes até o host parar. Com lote cheio emenda o próximo sem esperar; uma falha nunca derruba o laço.</summary>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         logger.LogInformation("publicador do outbox iniciado");
@@ -28,7 +35,7 @@ public sealed class PublishEventWorker(IServiceProvider services, ILogger<Publis
                 }
 
                 if (command.SentEventsCount == 0)
-                    await Task.Delay(EsperaSemEventos, stoppingToken);
+                    await Task.Delay(EsperaComOutboxVazio, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {

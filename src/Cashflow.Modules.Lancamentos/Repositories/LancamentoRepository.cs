@@ -4,6 +4,10 @@ using Dapper;
 
 namespace Cashflow.Modules.Lancamentos.Repositories;
 
+/// <summary>
+/// Os lançamentos na tabela <c>lancamento</c>, por SQL explícito (Dapper, ADR-0006). Toda escrita e
+/// leitura usa a transação aberta do <see cref="LancamentosDbContext"/>, se houver.
+/// </summary>
 public sealed class LancamentoRepository(LancamentosDbContext dbContext) : ILancamentoRepository
 {
     private const string Colunas = """
@@ -15,8 +19,10 @@ public sealed class LancamentoRepository(LancamentosDbContext dbContext) : ILanc
         Guid Id, Guid ComercianteId, string Tipo, decimal Valor, string? Descricao,
         DateOnly Data, DateTime CriadoEm, Guid? EstornoDe);
 
+    /// <inheritdoc />
     public IUnitOfWork UnitOfWork => dbContext;
 
+    /// <inheritdoc />
     public async Task AddAsync(Lancamento entity, CancellationToken cancellationToken = default)
     {
         var conn = await dbContext.GetConnectionAsync(cancellationToken);
@@ -27,7 +33,7 @@ public sealed class LancamentoRepository(LancamentosDbContext dbContext) : ILanc
         {
             entity.Id,
             entity.ComercianteId,
-            Tipo = entity.Tipo.Texto(),
+            Tipo = entity.Tipo.NoContrato(),
             entity.Valor,
             entity.Descricao,
             entity.Data,
@@ -36,9 +42,11 @@ public sealed class LancamentoRepository(LancamentosDbContext dbContext) : ILanc
         }, dbContext.CurrentTransaction, cancellationToken: cancellationToken));
     }
 
+    /// <inheritdoc />
     public Task<Lancamento?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         QuerySingleAsync($"SELECT {Colunas} FROM lancamento WHERE id = @id", new { id }, cancellationToken);
 
+    /// <inheritdoc />
     public Task<Lancamento?> GetForUpdateAsync(Guid comercianteId, Guid id, CancellationToken cancellationToken = default) =>
         QuerySingleAsync($"""
             SELECT {Colunas} FROM lancamento
@@ -46,6 +54,7 @@ public sealed class LancamentoRepository(LancamentosDbContext dbContext) : ILanc
             FOR UPDATE
             """, new { id, comercianteId }, cancellationToken);
 
+    /// <inheritdoc />
     public async Task<bool> ExisteEstornoDeAsync(Guid lancamentoId, CancellationToken cancellationToken = default)
     {
         var conn = await dbContext.GetConnectionAsync(cancellationToken);
@@ -63,10 +72,10 @@ public sealed class LancamentoRepository(LancamentosDbContext dbContext) : ILanc
         if (row is null)
             return null;
 
-        if (!TipoLancamentoExtensions.TryParseTexto(row.Tipo, out var tipo))
+        if (!TipoLancamentoExtensions.TryLerDoContrato(row.Tipo, out var tipo))
             throw new InvalidOperationException($"tipo de lançamento inválido no banco: {row.Tipo}");
 
-        return Lancamento.Restaurar(row.Id, row.ComercianteId, tipo, row.Valor, row.Descricao,
+        return Lancamento.ReconstituirDoBanco(row.Id, row.ComercianteId, tipo, row.Valor, row.Descricao,
             row.Data, new DateTimeOffset(DateTime.SpecifyKind(row.CriadoEm, DateTimeKind.Utc)), row.EstornoDe);
     }
 }

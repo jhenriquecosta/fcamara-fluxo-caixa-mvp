@@ -5,14 +5,20 @@ using Cashflow.Modules.Lancamentos.Constants;
 
 namespace Cashflow.Modules.Lancamentos.OutBoxEventPublishers;
 
-/// <summary>Leva o evento do outbox ao barramento, com o comerciante como chave de partição (ordem por comerciante).</summary>
+/// <summary>
+/// Leva os eventos de lançamento do outbox ao barramento, com o comerciante como chave de partição:
+/// os eventos de um comerciante chegam ao consolidado na ordem em que aconteceram.
+/// </summary>
 public sealed class LancamentoOutBoxEventPublisher(IMessageBus messageBus) : IOutBoxEventPublisher
 {
+    /// <inheritdoc />
     public static string[] CanHandleEventTypes() =>
         [EventTypeConstants.LancamentoRegistrado, EventTypeConstants.LancamentoEstornado];
 
+    /// <inheritdoc />
     public static string CanHandleEventSource() => typeof(PublishEventsCommand).Assembly.GetName().Name!;
 
+    /// <summary>Publica o payload do envelope gravado, preservando o <c>eventId</c> original para a deduplicação.</summary>
     public async Task HandleAsync(PublishingOutBoxEvent outbox, CancellationToken cancellationToken = default)
     {
         var envelope = CashflowEventSerializer.Deserialize<LancamentoEventPayload>(outbox.Payload)
