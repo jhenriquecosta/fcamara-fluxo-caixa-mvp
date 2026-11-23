@@ -2,7 +2,8 @@
 
 tipo: docs
 branch: docs/0021-requisitos-obrigatorios-e-coerencia
-estado: em andamento
+publicacao: pendente
+estado: concluído
 worktree: .claude/worktrees/docs-0021-requisitos-obrigatorios-e-coerencia
 responsavel: jhenriquecosta@hotmail.com
 issue: #52
