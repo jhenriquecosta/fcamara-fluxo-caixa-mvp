@@ -58,4 +58,4 @@
 
 ## O que o MVP não tem (e o alvo tem)
 
-O MVP usa um **emissor JWT de desenvolvimento** (`/dev/token`) e um segredo local; o alvo usa Cognito, JWKS, Secrets Manager e KMS. O rate limit do WAF é do alvo; no local não há borda. A rotação de segredos e a revogação de tokens são operação do alvo, não do MVP. A autenticação de serviço a serviço no alvo é por IAM/roles das tasks, não por token de usuário.
+A validação do token já está pronta para o alvo: com `Auth:Authority` configurado, a API valida pelos metadados OIDC e pelo **JWKS** do emissor (task 0019, provada por teste com um emissor OIDC falso), e ir para o Cognito é configuração, não código. Sem `Auth:Authority`, o MVP usa a chave simétrica de desenvolvimento e o **emissor JWT local** (`/dev/token`), que só existe nesse modo. O que fica exclusivo do alvo são o IdP gerenciado (Cognito), o Secrets Manager e o KMS para segredos e chaves. O rate limit do WAF é do alvo; no local não há borda. A rotação de segredos e a revogação de tokens são operação do alvo, não do MVP. A autenticação de serviço a serviço no alvo é por IAM/roles das tasks, não por token de usuário.

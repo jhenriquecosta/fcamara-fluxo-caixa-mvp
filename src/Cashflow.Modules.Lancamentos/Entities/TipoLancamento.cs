@@ -1,3 +1,5 @@
+using Cashflow.Contracts;
+
 namespace Cashflow.Modules.Lancamentos.Entities;
 
 /// <summary>A direção do dinheiro no caixa.</summary>
@@ -15,7 +17,7 @@ public static class TipoLancamentoExtensions
 {
     /// <summary>O texto do contrato: <c>credito</c> ou <c>debito</c>.</summary>
     public static string NoContrato(this TipoLancamento tipo) =>
-        tipo == TipoLancamento.Credito ? "credito" : "debito";
+        tipo == TipoLancamento.Credito ? TiposDeLancamento.Credito : TiposDeLancamento.Debito;
 
     /// <summary>O tipo que anula este no saldo: é o tipo do estorno.</summary>
     public static TipoLancamento Oposto(this TipoLancamento tipo) =>
@@ -27,13 +29,13 @@ public static class TipoLancamentoExtensions
     /// </summary>
     public static bool TryLerDoContrato(string? texto, out TipoLancamento tipo)
     {
-        if (string.Equals(texto, "credito", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(texto, TiposDeLancamento.Credito, StringComparison.OrdinalIgnoreCase))
         {
             tipo = TipoLancamento.Credito;
             return true;
         }
 
         tipo = TipoLancamento.Debito;
-        return string.Equals(texto, "debito", StringComparison.OrdinalIgnoreCase);
+        return string.Equals(texto, TiposDeLancamento.Debito, StringComparison.OrdinalIgnoreCase);
     }
 }

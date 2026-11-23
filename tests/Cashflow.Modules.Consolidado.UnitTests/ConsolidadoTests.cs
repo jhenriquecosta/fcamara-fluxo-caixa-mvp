@@ -20,6 +20,15 @@ public sealed class ConsolidadoTests
         Assert.Equal(efeitoEsperado, movimento.EfeitoNoSaldo);
     }
 
+    [Theory]
+    [InlineData("estorno")]
+    [InlineData("Credito")]
+    [InlineData("")]
+    public void Tipo_fora_do_contrato_e_recusado_em_vez_de_virar_debito(string tipo)
+    {
+        Assert.Throws<ArgumentException>(() => new MovimentoDoDia(Guid.NewGuid(), Guid.NewGuid(), tipo, 10m, Dia));
+    }
+
     [Fact]
     [Trait("Criterio", "AC4")]
     public void Um_estorno_anula_o_original_no_saldo_porque_chega_com_o_tipo_oposto()

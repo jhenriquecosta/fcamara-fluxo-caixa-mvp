@@ -87,7 +87,8 @@ public sealed class EstornarLancamentoCommandHandler(
         }
         else
         {
-            // recusa de regra: a chave fica livre para o cliente usar num pedido válido
+            // recusa de regra: a chave fica livre para o cliente repetir este mesmo estorno quando a regra deixar
+            // (a impressão do pedido, que no estorno é o lancamentoId, segue amarrada a ela: outro id com a mesma chave é recusado)
             await idempotenciaRepository.MarcarFalhaAsync(command.ComercianteId, command.IdempotencyKey, cancellationToken);
         }
 
