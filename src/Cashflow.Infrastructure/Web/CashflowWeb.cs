@@ -4,14 +4,19 @@ using Serilog.Context;
 
 namespace Cashflow.Infrastructure.Web;
 
-/// <summary>O pipeline HTTP comum: log de requisição, correlação e segurança, na mesma ordem em todo host.</summary>
+/// <summary>O pipeline HTTP comum: correlação, log de requisição e segurança, na mesma ordem em todo host.</summary>
 public static class CashflowWeb
 {
-    /// <summary>Log de cada requisição, contexto de correlação, autenticação e autorização.</summary>
+    /// <summary>Contexto de correlação, log de cada requisição, autenticação e autorização.</summary>
+    /// <remarks>
+    /// A correlação vem antes do log de requisição: o evento final da requisição é gravado quando o
+    /// <c>next()</c> volta, e nesse momento as propriedades empurradas por um middleware interno já foram
+    /// descartadas — o log de acesso (inclusive o dos 401/403) sairia sem <c>request_id</c> e <c>correlation_id</c>.
+    /// </remarks>
     public static WebApplication UseCashflowWeb(this WebApplication app)
     {
-        app.UseSerilogRequestLogging();
         app.UseRequestCorrelation();
+        app.UseSerilogRequestLogging();
         app.UseAuthentication();
         app.UseAuthorization();
         return app;
