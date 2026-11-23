@@ -63,7 +63,7 @@ groups:
 
 
       - alert: CashflowServiceDown
-        expr: up{job=~"lancamentos|consolidado"} == 0
+        expr: up{job=~"lancamentos|consolidado|background-server"} == 0
         for: 1m
         labels:
           severity: critical

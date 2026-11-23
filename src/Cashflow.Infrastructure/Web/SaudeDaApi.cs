@@ -48,7 +48,8 @@ public static class SaudeDaApi
         }
         catch (Exception ex) when (ex is NpgsqlException or SocketException or TimeoutException or OperationCanceledException)
         {
-            problemas.Add($"{modulo}: {ex.Message}");
+            // O /health/ready é anônimo: a mensagem do driver pode trazer host, porta e usuário do banco.
+            problemas.Add($"{modulo}: banco indisponível");
         }
     }
 }

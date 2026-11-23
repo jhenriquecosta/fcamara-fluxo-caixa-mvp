@@ -25,6 +25,12 @@ public sealed class KafkaReceiver<TConsumer, T> : IMessageReceiver<TConsumer, T>
 
     private static readonly TimeSpan BrokerQueryTimeout = TimeSpan.FromSeconds(5);
 
+    /// <summary>De quanto em quanto tempo, no máximo, o lag de uma partição é perguntado ao broker.</summary>
+    private static readonly long LagSampleIntervalMs = (long)TimeSpan.FromSeconds(5).TotalMilliseconds;
+
+    /// <summary>Quando cada partição teve o lag medido; o laço de consumo é de uma thread só.</summary>
+    private readonly Dictionary<TopicPartition, long> _lastLagSample = new();
+
     private readonly IConsumer<string?, string> _consumer;
     private readonly IProducer<string?, string> _deadLetterProducer;
     private readonly string _deadLetterTopic;
@@ -159,8 +165,18 @@ public sealed class KafkaReceiver<TConsumer, T> : IMessageReceiver<TConsumer, T>
     /// Mede quanto falta consumir na partição (último offset menos o commitado). A métrica é observação:
     /// se o broker não responder, o consumo segue sem ela.
     /// </summary>
+    /// <remarks>
+    /// A medição custa duas idas ao broker (watermark e offset commitado). Feita a cada mensagem, somaria
+    /// dois RTTs a cada evento; por isso cada partição é medida no máximo uma vez a cada 5 s, o que basta
+    /// para um alerta que olha janelas de minutos.
+    /// </remarks>
     private void RecordLag(ConsumeResult<string?, string> consumed)
     {
+        var agora = Environment.TickCount64;
+        if (_lastLagSample.TryGetValue(consumed.TopicPartition, out var ultima) && agora - ultima < LagSampleIntervalMs)
+            return;
+        _lastLagSample[consumed.TopicPartition] = agora;
+
         try
         {
             var watermark = _consumer.QueryWatermarkOffsets(consumed.TopicPartition, BrokerQueryTimeout);

@@ -1,6 +1,6 @@
 # Avaliação de padrões: onde Options e Strategy reduzem a dívida técnica
 
-> Status: **proposta**, aguardando decisão. A decisão fica registrada no [ADR-0012](../ultron/agents/adr/0012-options-validados-e-estrategias-nos-pontos-de-variacao.md).
+> Status: **parcialmente implementada**. O item 2 (Strategy do JWT) entrou na task 0019 e o item 5 (contrato do tipo) na task 0021; os itens 1, 3 e 4 seguem como proposta. A decisão fica registrada no [ADR-0012](../ultron/agents/adr/0012-options-validados-e-estrategias-nos-pontos-de-variacao.md).
 
 ## O critério
 
@@ -18,10 +18,10 @@ Cada candidato abaixo passou por quatro perguntas:
 | # | Candidato | Variação | Decisão | Prioridade |
 |---|---|---|---|---|
 | 1 | **Options pattern** (settings tipados e validados na subida) | configuração por ambiente; segredos no Secrets Manager no alvo | **aplicar** | 1ª, é a base das outras |
-| 2 | **Strategy na validação do JWT** (chave de dev × Cognito/JWKS) | requisito RF-7; o código de hoje não o atende | **aplicar** | 2ª |
+| 2 | **Strategy na validação do JWT** (chave de dev × Cognito/JWKS) | requisito RF-7 | **implementado** (task 0019) | — |
 | 3 | **Strategy de resiliência** (Polly no lugar dos laços de retry escritos à mão) | duas políticas diferentes, sem jitter, com números fixos no código | **aplicar** | 3ª |
 | 4 | **Strategy do broker** (Kafka × SQS FIFO) | alternativa de custo documentada | **não implementar agora**; tornar explícitos o ponto de troca e o contrato | 4ª, pequena |
-| 5 | Texto do contrato (`"credito"`) duplicado nos dois módulos | o contrato pode ganhar tipos | **corrigir** (não é padrão, é contrato) | junto com a 4 |
+| 5 | Texto do contrato (`"credito"`) duplicado nos dois módulos | o contrato pode ganhar tipos | **implementado** (task 0021) | — |
 | 6 | Polimorfismo no `TipoLancamento` | nenhuma: crédito e débito são o domínio | **não aplicar** | — |
 | 7 | Resultado que gera a própria resposta HTTP | nenhuma | **não aplicar** | — |
 | 8 | Strategy do dia de negócio (fuso por comerciante) | fora do escopo (requisito fixa São Paulo) | **não aplicar** | — |
@@ -75,11 +75,13 @@ Médio. Mexe nos três `Program.cs`, na `Infrastructure` e no registro dos módu
 
 ---
 
-## 2. Strategy na validação do JWT: aplicar
+## 2. Strategy na validação do JWT: implementado
 
-### O que o código mostra
+> **Implementado na task 0019.** `Auth:Authority` liga a validação pelos metadados OIDC e pelo JWKS do emissor; sem ela, vale a chave de desenvolvimento, e só então o `/dev/token` existe. Prova: um teste com emissor OIDC falso (metadata + JWKS) aceita o token da chave publicada e recusa, com 401, o de outra chave. O texto abaixo é a avaliação que levou à decisão.
 
-O RF-7 diz: *"O JWT é validado pelas chaves públicas (JWKS)"*, e o `seguranca-integracao.md` diz que o alvo é o Cognito. O `CashflowAuth` só sabe validar com a **chave simétrica de desenvolvimento**. **Hoje o código não atende o requisito do alvo**: levar o sistema ao Cognito exigiria reescrever a autenticação.
+### O que o código mostrava
+
+O RF-7 diz: *"O JWT é validado pelas chaves públicas (JWKS)"*, e o `seguranca-integracao.md` diz que o alvo é o Cognito. Antes da task 0019, o `CashflowAuth` só sabia validar com a **chave simétrica de desenvolvimento**, e levar o sistema ao Cognito exigiria reescrever a autenticação.
 
 ### A proposta
 
@@ -159,7 +161,9 @@ O `custos.md` registra o **SQS FIFO como alternativa que corta pela metade o cus
 
 ---
 
-## 5. O texto do contrato duplicado nos dois módulos: corrigir
+## 5. O texto do contrato duplicado nos dois módulos: implementado
+
+> **Implementado na task 0021.** `Cashflow.Contracts.TiposDeLancamento` tem as duas constantes, usadas pelos dois módulos, e o `MovimentoDoDia` recusa um tipo fora do contrato na construção. O texto abaixo é a avaliação que levou à decisão.
 
 `"credito"` e `"debito"` aparecem como texto literal em `TipoLancamento` (Lançamentos) e em `MovimentoDoDia` (Consolidado). São o **contrato** do evento, mas não estão no `Cashflow.Contracts`. Um terceiro tipo, ou uma mudança de grafia, quebraria o consolidado em silêncio: o `MovimentoDoDia` trataria qualquer coisa diferente de `"credito"` como débito.
 
@@ -185,6 +189,8 @@ O `custos.md` registra o **SQS FIFO como alternativa que corta pela metade o cus
                      ├──▶ 3. Resiliência com Polly
                      └──▶ 4. Escolha do broker por enum + 5. contrato tipado
 ```
+
+**Estado:** a 2 entrou na task 0019 sem esperar a 1, lendo `Auth:Authority` e `Auth:SigningKey` direto da configuração; a 5 entrou na task 0021. Seguem propostas a 1, a 3 e a 4.
 
 A opção 1 é a base: as outras leem parâmetros que ela tipa e valida. A 2 tem o maior retorno, porque fecha uma lacuna em relação a um requisito escrito. A 3 tira código próprio. A 4 e a 5 são pequenas e podem ir juntas.
 
