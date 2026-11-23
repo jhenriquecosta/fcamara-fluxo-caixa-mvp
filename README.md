@@ -1,6 +1,6 @@
 # Fluxo de caixa — MVP (desafio Carrefour / FCamara)
 
-Dois serviços em .NET 10 — **Lançamentos** e **Consolidado** — que registram débitos e créditos com idempotência, corrigem por contra-lançamento e derivam o saldo diário por evento. A arquitetura-alvo é AWS (desenhada no ADR-010); o que roda aqui é o MVP local, com PostgreSQL, Kafka 4 em KRaft, ELK e Prometheus/Grafana, e um frontend em Blazor Server com login e perfis.
+Dois serviços em .NET 10 — **Lançamentos** e **Consolidado** — que registram débitos e créditos com idempotência, corrigem por contra-lançamento e derivam o saldo diário por evento. A arquitetura-alvo é AWS, desenhada no diagrama-base do enunciado, identificado nele como **ADR-010** — não confundir com o [ADR-0010](docs/ultron/agents/adr/0010-frontend-blazor-bff.md) da série local, que trata do frontend; o que roda aqui é o MVP local, com PostgreSQL, Kafka 4 em KRaft, ELK e Prometheus/Grafana, e um frontend em Blazor Server com login e perfis.
 
 ## O problema
 
@@ -13,11 +13,11 @@ Um comerciante precisa controlar o fluxo de caixa diário e consultar o saldo co
 - O estorno é um **novo lançamento** de tipo oposto; o original nunca é editado.
 - O código é um **monólito modular**: projetos compartilhados (CrossCuttingConcerns, Domain, Application, Contracts, Infrastructure), um módulo por serviço (`Cashflow.Modules.Lancamentos`, `Cashflow.Modules.Consolidado`) e três hosts (`WebAPI`, `BackgroundServer`, `Migrator`). A escolha tem motivo por eixo: a **fronteira de cada serviço** fica explícita no código e é verificada por teste (ArchTests), e o **mesmo binário sobe duas vezes**, cada um com o módulo que serve — o isolamento de falha mora no deploy, sem código duplicado. Cada caso de uso é um `ICommand`/`IQuery` com handler, acionado pelo `Dispatcher`, que é onde autorização, auditoria e nova tentativa de banco entram como decorators em vez de se repetirem em cada handler.
 - O mesmo `Cashflow.WebAPI` sobe **duas vezes** no deploy, cada uma com um módulo ligado (`Modules:<X>:Enabled`). Por isso uma queda do consolidado não derruba os lançamentos. O outbox e o consumidor rodam no `BackgroundServer`.
-- A **configuração tipada com Options** e o **Strategy nos pontos de variação** não entraram no MVP: estão avaliados com evidência no [ADR-0012](docs/ultron/agents/adr/0012-options-validados-e-estrategias-nos-pontos-de-variacao.md) e no [documento de avaliação](docs/arquitetura/avaliacao-de-padroes.md), com a ordem e as dependências das tasks que os adotam — a justificativa de cada um está lá, não presumida aqui.
+- Os padrões avaliados no [ADR-0012](docs/ultron/agents/adr/0012-options-validados-e-estrategias-nos-pontos-de-variacao.md) e no [documento de avaliação](docs/arquitetura/avaliacao-de-padroes.md) entram por task, com evidência: o **Strategy na validação do JWT** (OIDC/JWKS × chave local) e o **tipo do lançamento como contrato** já estão implementados; a **configuração tipada com Options**, a **resiliência com Polly** e o ponto de troca explícito do broker seguem como proposta, com a ordem e as dependências registradas lá.
 - O **frontend** (`Cashflow.Blazor.Modules` + `Cashflow.BlazorServerSide`) é mais um cliente da API: só fala HTTP, com um endereço por serviço. O login cria uma sessão por cookie `HttpOnly`; o host emite, por chamada, um token de 5 minutos com só os escopos do perfil, e o token nunca chega ao navegador (Blazor Server como BFF, ADR-0010). Perfis: **operador** (lança, estorna, consulta) e **consulta** (só lê); quem garante é a API, por escopo. A validação do JWT tem duas estratégias escolhidas por configuração (ADR-0012): **`Auth:Authority`** liga a validação pelos metadados OIDC e pelo **JWKS** do emissor — o caminho do Cognito, provado por teste com um emissor OIDC falso — e, sem ela, o local usa a chave simétrica de desenvolvimento, e só nesse modo o `/dev/token` existe.
-- O desenho-base está em [`docs/requisitos/Arquietura-solucao-v2.png`](docs/requisitos/Arquietura-solucao-v2.png); o texto com os diagramas C4 e o mapeamento local ↔ AWS está em [`docs/arquitetura/arquitetura-alvo.md`](docs/arquitetura/arquitetura-alvo.md).
+- O desenho-base (o ADR-010 do enunciado) está em [`docs/requisitos/Arquietura-solucao-v2.png`](docs/requisitos/Arquietura-solucao-v2.png); o texto com os diagramas C4 e o mapeamento local ↔ AWS está em [`docs/arquitetura/arquitetura-alvo.md`](docs/arquitetura/arquitetura-alvo.md).
 
-Decisões registradas em [ADRs](docs/ultron/agents/adr/): estilo event-driven com outbox (0001), Kafka em KRaft (0002), PostgreSQL com bancos lógicos (0003), idempotência e estorno (0004), projeção e dia do registro (0005), stack .NET 10 (0006), a avaliação de event sourcing contra o ledger com outbox (0008), o monólito modular (0009, que substitui o 0007), o frontend Blazor Server como BFF (0010), a superfície de demonstração — um cliente, duas UIs e o `start.sh` (0011), a avaliação de padrões com Options e Strategy nos pontos de variação (0012, proposta) e a superfície OpenAPI nativa com escopos por rota (0013). Os requisitos estão no [PRD](docs/requisitos/requisitos.md).
+Decisões registradas em [ADRs](docs/ultron/agents/adr/): estilo event-driven com outbox (0001), Kafka em KRaft (0002), PostgreSQL com bancos lógicos (0003), idempotência e estorno (0004), projeção e dia do registro (0005), stack .NET 10 (0006), a avaliação de event sourcing contra o ledger com outbox (0008), o monólito modular (0009, que substitui o 0007), o frontend Blazor Server como BFF (0010), a superfície de demonstração — um cliente, duas UIs e o `start.sh` (0011), a avaliação de padrões com Options e Strategy nos pontos de variação (0012, proposta, com os itens 2 e 5 implementados) e a superfície OpenAPI nativa com escopos por rota (0013). Os requisitos estão no [PRD](docs/requisitos/requisitos.md).
 
 ## Como rodar localmente
 
@@ -136,14 +136,14 @@ No Kibana, a data view `cashflow-logs-*` mostra os logs JSON dos dois serviços.
 dotnet test --solution Cashflow.slnx
 ```
 
-A suíte tem **147 testes**, um por regra que prova. Os de integração e o ponta a ponta sobem PostgreSQL e Kafka reais via Testcontainers. O nome de cada teste é a regra que ele prova, e o critério de aceite do PRD vai num `Trait`: `dotnet test --solution Cashflow.slnx --filter-trait "Criterio=AC4"` roda só o que prova o AC4.
+A suíte tem **154 testes**, um por regra que prova. Os de integração e o ponta a ponta sobem PostgreSQL e Kafka reais via Testcontainers. O nome de cada teste é a regra que ele prova, e o critério de aceite do PRD vai num `Trait`: `dotnet test --solution Cashflow.slnx --filter-trait "Criterio=AC4"` roda só o que prova o AC4.
 
 | Projeto | Testes | O que cobre |
 |---|---|---|
 | `Modules.Lancamentos.UnitTests` | 24 | regras do lançamento e do estorno, dia do negócio em America/Sao_Paulo, tipo do contrato e impressão digital do corpo |
-| `Modules.Lancamentos.IntegrationTests` | 34 | idempotência (replay, 422 de payload, 409 de concorrência), estorno (inclusive de outro comerciante), listagem do dia com a marca de estornado, auth, métricas, o WebAPI sem trabalho de fundo e com só o módulo ligado, o documento OpenAPI com escopos por rota e a saúde live/ready |
-| `Modules.Consolidado.UnitTests` | 5 | efeito no saldo, estorno anulando o original, saldo de abertura, dia sem movimento |
-| `Modules.Consolidado.IntegrationTests` | 6 | consulta, data inválida, módulo isolado, carga de 50 req/s com ≥95% de sucesso, e o documento OpenAPI do deploy |
+| `Modules.Lancamentos.IntegrationTests` | 37 | idempotência (replay, 422 de payload, 409 de concorrência), estorno (inclusive de outro comerciante), listagem do dia com a marca de estornado, auth (inclusive a validação por OIDC/JWKS contra um emissor falso), métricas, o WebAPI sem trabalho de fundo e com só o módulo ligado, o documento OpenAPI com escopos por rota e a saúde live/ready |
+| `Modules.Consolidado.UnitTests` | 8 | efeito no saldo, tipo fora do contrato recusado, estorno anulando o original, saldo de abertura, dia sem movimento |
+| `Modules.Consolidado.IntegrationTests` | 7 | consulta, chegada tardia propagando ao acumulado dos dias seguintes, data inválida, módulo isolado, carga de 50 req/s com ≥95% de sucesso, e o documento OpenAPI do deploy |
 | `EndToEndTests` | 5 | a topologia do compose (WebAPI duas vezes e BackgroundServer): fluxo até o consolidado, estorno, entrega duplicada somando uma vez, DLT após 1+3 tentativas, lançamentos de pé com o consolidado fora |
 | `BlazorServerSide.IntegrationTests` | 33 | login (redirect sem sessão, credencial inválida, open redirect, cookie `HttpOnly`/`SameSite`), perfis, logout com antiforgery, token ausente do HTML e do cookie, escopos do token por perfil, as telas contra a API real, o painel de infraestrutura e a saúde live/ready |
 | `Terminal.Tests` | 19 | menu por perfil, lançar, listar e estornar, consolidado, telas de infraestrutura, demo e o token de desenvolvimento — com `TestConsole` e API falsa |
@@ -152,6 +152,15 @@ A suíte tem **147 testes**, um por regra que prova. Os de integração e o pont
 ## Observabilidade
 
 A convenção de logs e as métricas estão em [`docs/ultron/agents/logging.md`](docs/ultron/agents/logging.md); o stack local e o mapeamento para o alvo estão em [`observability/README.md`](observability/README.md). A aplicação emite OpenTelemetry e JSON — trocar ELK/Prometheus por CloudWatch é configuração, não código. Os SLOs propostos estão em [`observability/slos/cashflow.yml`](observability/slos/cashflow.yml).
+
+## Documentação dos requisitos obrigatórios
+
+| Requisito do desafio | Onde está |
+|---|---|
+| Mapeamento de domínios funcionais e capacidades de negócio | [`docs/ultron/agents/business/README.md`](docs/ultron/agents/business/README.md) — domínios e capacidades em [`capabilities.md`](docs/ultron/agents/business/capabilities.md), cadeia de valor em [`value-streams.md`](docs/ultron/agents/business/value-streams.md) |
+| Refinamento dos requisitos funcionais e não funcionais | [PRD — `docs/requisitos/requisitos.md`](docs/requisitos/requisitos.md) |
+| Desenho da solução completo | [Arquitetura-alvo com C4 — `docs/arquitetura/arquitetura-alvo.md`](docs/arquitetura/arquitetura-alvo.md) e o desenho-base [`Arquietura-solucao-v2.png`](docs/requisitos/Arquietura-solucao-v2.png) |
+| Justificativa das decisões de arquitetura e tecnologia | [ADRs 0001–0013 — `docs/ultron/agents/adr/`](docs/ultron/agents/adr/) |
 
 ## Diferenciais do desafio
 

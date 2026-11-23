@@ -27,7 +27,7 @@ Aplicar padrão só onde há variação real, e preferir o mecanismo do .NET a u
 2. **Strategy na validação do JWT.** `OidcAuthority` (metadados OIDC e JWKS, o alvo) ou chave de desenvolvimento (local), escolhida por `Auth:Authority` × `Auth:SigningKey` via `IConfigureNamedOptions<JwtBearerOptions>`. O `/dev/token` só existe com a estratégia de desenvolvimento. **Implementado na task 0019**, com teste de emissor OIDC falso (metadata + JWKS): token da chave publicada é aceito, token de outra chave recebe 401.
 3. **Resiliência com Polly** (`Microsoft.Extensions.Resilience`): pipelines `database` e `consumer`, exponenciais e com jitter, parametrizados pelas opções, no lugar dos dois laços escritos à mão.
 4. **Broker:** não implementar um segundo adaptador. `Provider` vira `enum` validado, a escolha fica num ponto só, e as portas documentam as garantias que todo adaptador precisa honrar: ordem por chave, at-least-once e retenção para replay.
-5. **Contrato:** os tipos `credito`/`debito` vão para o `Cashflow.Contracts`; o consolidado recusa tipo desconhecido em vez de tratá-lo como débito.
+5. **Contrato:** os tipos `credito`/`debito` vão para o `Cashflow.Contracts`; o consolidado recusa tipo desconhecido em vez de tratá-lo como débito. **Implementado na task 0021**: `Cashflow.Contracts.TiposDeLancamento`, usado pelos dois módulos, e o `MovimentoDoDia` lança na construção — o consumidor esgota as tentativas e o evento vai para a DLT.
 
 **Não aplicar:** polimorfismo no `TipoLancamento`, resultado que gera a própria resposta HTTP, fuso por comerciante e MediatR.
 

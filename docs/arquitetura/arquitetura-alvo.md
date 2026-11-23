@@ -1,6 +1,6 @@
 # Arquitetura-alvo — fluxo de caixa
 
-O desenho-base é o [ADR-010](../requisitos/Arquietura-solucao-v2.png). Este documento registra a leitura em texto: o contexto, os containers, o fluxo de dados, o modelo de consistência e como cada requisito não funcional é atendido. As decisões estão nos [ADRs](../ultron/agents/adr/), aceitos em 18/11/2026.
+O desenho-base é o [ADR-010](../requisitos/Arquietura-solucao-v2.png), código impresso no próprio diagrama do enunciado — não é o [ADR-0010](../ultron/agents/adr/0010-frontend-blazor-bff.md) da série local, que trata do frontend. Este documento registra a leitura em texto: o contexto, os containers, o fluxo de dados, o modelo de consistência e como cada requisito não funcional é atendido. As decisões estão nos [ADRs](../ultron/agents/adr/), aceitos em 18/11/2026.
 
 ## Contexto
 
