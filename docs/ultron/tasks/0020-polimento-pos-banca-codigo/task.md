@@ -2,7 +2,7 @@
 
 tipo: chore
 branch: chore/0020-polimento-pos-banca-codigo
-publicacao: pendente
+publicacao: release v1.4.1
 estado: concluído
 worktree: .claude/worktrees/chore-0020-polimento-pos-banca-codigo
 responsavel: jhenriquecosta@hotmail.com

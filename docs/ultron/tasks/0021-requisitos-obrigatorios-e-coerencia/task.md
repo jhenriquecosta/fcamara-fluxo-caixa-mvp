@@ -2,7 +2,7 @@
 
 tipo: docs
 branch: docs/0021-requisitos-obrigatorios-e-coerencia
-publicacao: pendente
+publicacao: release v1.4.1
 estado: concluído
 worktree: .claude/worktrees/docs-0021-requisitos-obrigatorios-e-coerencia
 responsavel: jhenriquecosta@hotmail.com
