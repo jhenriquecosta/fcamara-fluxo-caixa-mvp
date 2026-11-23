@@ -1,8 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Cashflow.Application;
+using Cashflow.Modules.Consolidado.Commands;
+using Cashflow.Modules.Consolidado.Entities;
 using Cashflow.Testing;
 using Dapper;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
 namespace Cashflow.Modules.Consolidado.IntegrationTests;
@@ -38,6 +42,39 @@ public sealed class ConsolidadoTests(PostgresFixture db)
         Assert.Equal(0m, consolidado.GetProperty("saldoDia").GetDecimal());
         Assert.Equal(80m, consolidado.GetProperty("saldoAnterior").GetDecimal());
         Assert.Equal(80m, consolidado.GetProperty("saldoAcumulado").GetDecimal());
+    }
+
+    /// <summary>
+    /// Um movimento de D que chega depois de D+1 já aberto — virada da meia-noite com o outbox atrasado ou
+    /// reprocessamento da DLT — não é lançamento retroativo: o dia dele é o do registro. Mas o acumulado de
+    /// D+1 foi aberto sem ele, então a projeção precisa propagar o efeito para os dias posteriores.
+    /// </summary>
+    [Fact]
+    public async Task Movimento_que_chega_atrasado_propaga_o_efeito_para_o_acumulado_dos_dias_posteriores()
+    {
+        // Arrange: D+1 já foi projetado com um crédito de 30 antes do débito de 10 em D
+        var comerciante = Guid.NewGuid();
+        var dia = new DateOnly(2026, 11, 17);
+        using var api = WebApiFactory.SoConsolidado(db.ConnectionString);
+        await ProjetarAsync(api, new MovimentoDoDia(Guid.NewGuid(), comerciante, "credito", 30m, dia.AddDays(1)));
+
+        // Act: o débito de D chega atrasado
+        await ProjetarAsync(api, new MovimentoDoDia(Guid.NewGuid(), comerciante, "debito", 10m, dia));
+
+        // Assert: D+1 abre com o -10 de D e fecha em 20
+        using var cliente = api.CreateClient().Autenticado(comerciante, "consolidado.read");
+        var diaSeguinte = await cliente.GetFromJsonAsync<JsonElement>(
+            $"/api/v1/consolidado/{dia.AddDays(1):yyyy-MM-dd}", Ct);
+        Assert.Equal(30m, diaSeguinte.GetProperty("saldoDia").GetDecimal());
+        Assert.Equal(-10m, diaSeguinte.GetProperty("saldoAnterior").GetDecimal());
+        Assert.Equal(20m, diaSeguinte.GetProperty("saldoAcumulado").GetDecimal());
+    }
+
+    private static async Task ProjetarAsync(WebApiFactory api, MovimentoDoDia movimento)
+    {
+        using var escopo = api.Services.CreateScope();
+        await escopo.ServiceProvider.GetRequiredService<Dispatcher>()
+            .DispatchAsync(new ProjetarMovimentoCommand { Movimento = movimento }, Ct);
     }
 
     [Fact]

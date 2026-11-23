@@ -24,6 +24,8 @@ A entrada de dados tem um detalhe que muda o desenho: se um lançamento puder se
 
 **Projeção.** `consolidado_diario` guarda, por `(comercianteId, data)`, o `saldoDia` e o `saldoAcumulado` (soma corrente). O consumidor aplica o evento e o `eventId` em `evento_processado` **na mesma transação**. O `saldoAnterior` é `saldoAcumulado - saldoDia`; o `saldoAcumulado` é `saldoAnterior + saldoDia`. A API lê só a projeção. Dia sem movimento responde zeros, com o saldo anterior do último dia consolidado. A projeção é reconstruível por replay.
 
+**Chegada tardia não é lançamento retroativo.** O dia do movimento é sempre o do registro, mas o evento pode chegar ao consumidor depois que o dia seguinte já foi aberto: na virada da meia-noite, com o outbox atrasado alguns segundos, ou no reprocessamento de um evento da DLT. A ordem por partição (`comercianteId`) não protege nenhum dos dois casos. Por isso a projeção, na mesma transação, soma o efeito do movimento ao `saldoAcumulado` dos dias posteriores que já existirem. O custo é uma atualização por dia aberto depois do movimento — zero no caso normal, poucos dias no pior caso — e não exige o mecanismo de recomputação que o lançamento retroativo exigiria.
+
 ## Alternativas consideradas
 
 - **Calcular o saldo na leitura, somando os lançamentos** — rejeitado: acopla a leitura ao serviço de escrita e compromete os 50 req/s.
@@ -47,6 +49,7 @@ A entrada de dados tem um detalhe que muda o desenho: se um lançamento puder se
 |---|---|---|---|
 | 1.0 | 2026-11-18 | ULTRON · ultron-adr | Criação |
 | 1.1 | 2026-11-18 | ULTRON · ultron-adr | Operador aceita a decisão — status accepted |
+| 1.2 | 2026-11-23 | ULTRON · task 0020 | Chegada tardia: a projeção propaga o efeito aos dias posteriores já abertos (revisão pós-banca) |
 
 **Rastreabilidade.** Desafio Carrefour (via FCamara) › repositório `fcamara-fluxo-caixa-mvp` › PRD-0001 › ADR-0005.
 
