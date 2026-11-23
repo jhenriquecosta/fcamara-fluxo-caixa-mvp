@@ -1,9 +1,13 @@
 // Prova de carga do RNF-2: o consolidado recebe 50 requisições por segundo com, no máximo,
-// 5% de perda. Roda contra a stack local com o token de desenvolvimento do ADR-0010.
+// 5% de perda. Roda contra a stack local com o token de desenvolvimento do ADR-0010, pedido ao
+// próprio consolidado: a carga não depende da API de lançamentos.
 //
-//   docker run --rm --network host -v "$PWD/load:/scripts" grafana/k6 run /scripts/k6-consolidado.js
+// O `./start.sh load` roda o k6 na rede do compose, igual em Linux, macOS e Windows:
 //
-// Variáveis: LANCAMENTOS_URL, CONSOLIDADO_URL, COMERCIANTE_ID.
+//   docker run --rm --network cashflow_default -e CONSOLIDADO_URL=http://consolidado-api:8080 \
+//     -v "$PWD/load:/scripts" grafana/k6:2.4.0 run /scripts/k6-consolidado.js
+//
+// Variáveis: CONSOLIDADO_URL (padrão http://localhost:8081, para o k6 instalado no host), COMERCIANTE_ID.
 import http from 'k6/http';
 import { check } from 'k6';
 
@@ -24,13 +28,12 @@ export const options = {
     },
 };
 
-const LANCAMENTOS = __ENV.LANCAMENTOS_URL || 'http://localhost:8080';
 const CONSOLIDADO = __ENV.CONSOLIDADO_URL || 'http://localhost:8081';
 const COMERCIANTE = __ENV.COMERCIANTE_ID || '7c9e6679-7425-40de-944b-e07fc1f90ae7';
 
 export function setup() {
     const resposta = http.post(
-        `${LANCAMENTOS}/dev/token`,
+        `${CONSOLIDADO}/dev/token`,
         JSON.stringify({ comercianteId: COMERCIANTE, scopes: ['consolidado.read'] }),
         { headers: { 'Content-Type': 'application/json' } });
     return {

@@ -37,6 +37,9 @@ URLS_SAUDE=(
 )
 PORTAS=(8080 8081 8082 8090 3000 5601 9090 9200)
 
+# A versão do k6 fica fixa: a prova do RNF-2 precisa rodar igual na máquina de quem avalia.
+K6_IMAGEM="grafana/k6:2.4.0"
+
 stack_no_ar() {
   [[ -n "$(docker compose ps --status running -q 2>/dev/null | head -n1)" ]]
 }
@@ -230,7 +233,11 @@ comando_terminal() {
 comando_load() {
   garante_stack
   titulo "Carga — RNF-2: 50 req/s no consolidado, no máximo 5% de falha"
-  if docker run --rm --network host -v "$PWD/load:/scripts" grafana/k6 run /scripts/k6-consolidado.js; then
+  # Na rede do compose, e não em --network host: no Docker Desktop (macOS/Windows) o host
+  # não compartilha o localhost com o container, e a carga falharia antes de começar.
+  if docker run --rm --network cashflow_default \
+       -e CONSOLIDADO_URL=http://consolidado-api:8080 \
+       -v "$PWD/load:/scripts" "$K6_IMAGEM" run /scripts/k6-consolidado.js; then
     ok "carga concluída — o relatório acima é a evidência do RNF-2"
   else
     falha "a carga não passou dos limites do RNF-2"

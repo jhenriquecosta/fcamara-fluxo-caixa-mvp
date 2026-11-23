@@ -38,9 +38,10 @@ public sealed class ConsolidadoRepository(ConsolidadoDbContext dbContext) : ICon
 
     /// <inheritdoc />
     /// <remarks>
-    /// Dois comandos na transação do chamador: o <c>INSERT ... ON CONFLICT DO NOTHING</c> em
+    /// Três comandos na transação do chamador: o <c>INSERT ... ON CONFLICT DO NOTHING</c> em
     /// <c>evento_processado</c> é a deduplicação (inseriu zero linhas, o evento é repetido); depois, o
-    /// upsert soma o movimento no dia, abrindo o dia com o acumulado do último anterior quando ele é novo.
+    /// upsert soma o movimento no dia, abrindo o dia com o acumulado do último anterior quando ele é novo;
+    /// por fim, o efeito é propagado ao acumulado dos dias posteriores que já existirem.
     /// </remarks>
     public async Task<ResultadoDaProjecao> ProjetarAsync(MovimentoDoDia movimento, CancellationToken cancellationToken = default)
     {
@@ -64,6 +65,15 @@ public sealed class ConsolidadoRepository(ConsolidadoDbContext dbContext) : ICon
             ON CONFLICT (comerciante_id, data) DO UPDATE
             SET saldo_dia = consolidado_diario.saldo_dia + EXCLUDED.saldo_dia,
                 saldo_acumulado = consolidado_diario.saldo_acumulado + EXCLUDED.saldo_dia
+            """, new { movimento.ComercianteId, movimento.Data, Efeito = movimento.EfeitoNoSaldo },
+            dbContext.CurrentTransaction, cancellationToken: cancellationToken));
+
+        // Chegada tardia (virada da meia-noite, reprocessamento da DLT): os dias seguintes já abertos
+        // herdaram um acumulado sem este movimento. Não é retroativo — o dia é o do registro (ADR-0005).
+        await conn.ExecuteAsync(new CommandDefinition("""
+            UPDATE consolidado_diario
+            SET saldo_acumulado = saldo_acumulado + @Efeito
+            WHERE comerciante_id = @ComercianteId AND data > @Data
             """, new { movimento.ComercianteId, movimento.Data, Efeito = movimento.EfeitoNoSaldo },
             dbContext.CurrentTransaction, cancellationToken: cancellationToken));
 
