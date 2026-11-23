@@ -2,7 +2,8 @@
 
 tipo: chore
 branch: chore/0020-polimento-pos-banca-codigo
-estado: em andamento
+publicacao: pendente
+estado: concluído
 worktree: .claude/worktrees/chore-0020-polimento-pos-banca-codigo
 responsavel: jhenriquecosta@hotmail.com
 issue: #51

@@ -1,0 +1,1 @@
+{"ts": "2026-11-23T18:55:06.755Z", "skill": "ultron-flow", "action": "gate", "summary": "verify pulado com --no-verify ao fechar task 0020-polimento-pos-banca-codigo", "task": "0020-polimento-pos-banca-codigo", "issue": "51", "branch": "chore/0020-polimento-pos-banca-codigo", "outcome": "escaped", "gate": "verify"}
